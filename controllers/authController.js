@@ -2,10 +2,11 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import * as authService from "../services/authService.js";
 import { loginSchema, registerSchema } from "../validators/authValidator.js";
 
-export const register = asyncHandler(async (req,res) => {
+export const register = asyncHandler(async (req, res) => {
   const parsed = registerSchema.parse(req.body);
-  const user = await authService.registerUser(parsed);
-  res.json({ success: true, user });
+  const { user, token } = await authService.registerUser(parsed);
+
+  res.json({ success: true, user, token });
 });
 
 export const login = asyncHandler(async (req,res) => {

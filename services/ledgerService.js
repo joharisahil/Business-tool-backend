@@ -8,7 +8,7 @@
  *  - Account Drilldown (transaction history for a specific account)
  *  - Vendor Ledger (purchases + payments + outstanding)
  *  - P&L and Balance Sheet summary
- */import mongoose from "mongoose";
+ */ import mongoose from "mongoose";
 import JournalEntry from "../models/JournalEntry.js";
 import LedgerAccount from "../models/LedgerAccount.js";
 import PurchaseInvoice from "../models/PurchaseInvoice.js";
@@ -27,11 +27,12 @@ const { DEBIT, CREDIT } = JOURNAL_ENTRY_TYPE;
 export async function getTrialBalance(
   organizationId,
   fromDate = null,
-  toDate = null
+  toDate = null,
 ) {
-  const accounts = await LedgerAccount
-    .find({ organizationId, isActive: true })
-    .sort({ code: 1 });
+  const accounts = await LedgerAccount.find({
+    organizationId,
+    isActive: true,
+  }).sort({ code: 1 });
 
   const accountIds = accounts.map((a) => a._id);
 
@@ -52,20 +53,12 @@ export async function getTrialBalance(
         _id: "$lines.account_id",
         totalDebit: {
           $sum: {
-            $cond: [
-              { $eq: ["$lines.entryType", DEBIT] },
-              "$lines.amount",
-              0,
-            ],
+            $cond: [{ $eq: ["$lines.entryType", DEBIT] }, "$lines.amount", 0],
           },
         },
         totalCredit: {
           $sum: {
-            $cond: [
-              { $eq: ["$lines.entryType", CREDIT] },
-              "$lines.amount",
-              0,
-            ],
+            $cond: [{ $eq: ["$lines.entryType", CREDIT] }, "$lines.amount", 0],
           },
         },
       },
@@ -81,15 +74,12 @@ export async function getTrialBalance(
   });
 
   return accounts.map((account) => {
-    const t =
-      totalsMap[account._id.toString()] || {
-        debit: 0,
-        credit: 0,
-      };
+    const t = totalsMap[account._id.toString()] || {
+      debit: 0,
+      credit: 0,
+    };
 
-    const isDebitNormal = [ASSET, EXPENSE].includes(
-      account.type
-    );
+    const isDebitNormal = [ASSET, EXPENSE].includes(account.type);
 
     const balance = isDebitNormal
       ? account.openingBalance + t.debit - t.credit
@@ -139,8 +129,7 @@ export async function getAccountDrilldown({
     { $unwind: "$lines" },
     {
       $match: {
-        "lines.account_id":
-          new mongoose.Types.ObjectId(account_id),
+        "lines.account_id": new mongoose.Types.ObjectId(account_id),
       },
     },
     { $sort: { createdAt: 1 } },
@@ -161,9 +150,7 @@ export async function getAccountDrilldown({
     { $limit: limit },
   ]);
 
-  const isDebitNormal = [ASSET, EXPENSE].includes(
-    account.type
-  );
+  const isDebitNormal = [ASSET, EXPENSE].includes(account.type);
 
   let runningBalance = account.openingBalance;
 
@@ -173,25 +160,21 @@ export async function getAccountDrilldown({
         ? e.lineAmount
         : -e.lineAmount
       : e.lineEntryType === CREDIT
-      ? e.lineAmount
-      : -e.lineAmount;
+        ? e.lineAmount
+        : -e.lineAmount;
 
     runningBalance += movement;
 
     return {
       ...e,
-      runningBalance: parseFloat(
-        runningBalance.toFixed(2)
-      ),
+      runningBalance: parseFloat(runningBalance.toFixed(2)),
     };
   });
 
   return {
     account,
     entries,
-    runningBalance: parseFloat(
-      runningBalance.toFixed(2)
-    ),
+    runningBalance: parseFloat(runningBalance.toFixed(2)),
   };
 }
 
@@ -200,16 +183,14 @@ export async function getVendorLedger(
   organizationId,
   vendor_id,
   fromDate = null,
-  toDate = null
+  toDate = null,
 ) {
   const dateFilter = {};
 
   if (fromDate || toDate) {
     dateFilter.createdAt = {};
-    if (fromDate)
-      dateFilter.createdAt.$gte = new Date(fromDate);
-    if (toDate)
-      dateFilter.createdAt.$lte = new Date(toDate);
+    if (fromDate) dateFilter.createdAt.$gte = new Date(fromDate);
+    if (toDate) dateFilter.createdAt.$lte = new Date(toDate);
   }
 
   const [invoices, payments] = await Promise.all([
@@ -221,7 +202,7 @@ export async function getVendorLedger(
     })
       .sort({ createdAt: 1 })
       .select(
-        "invoiceNumber grandTotal paidAmount outstandingAmount paymentStatus createdAt"
+        "invoiceNumber grandTotal paidAmount outstandingAmount paymentStatus createdAt",
       ),
 
     Payment.find({
@@ -230,9 +211,7 @@ export async function getVendorLedger(
       ...dateFilter,
     })
       .sort({ paidAt: 1 })
-      .select(
-        "amount method reference paidAt invoiceNumber"
-      ),
+      .select("amount method reference paidAt invoiceNumber"),
   ]);
 
   const ledgerRows = [];
@@ -255,51 +234,36 @@ export async function getVendorLedger(
       credit: pay.amount,
       document: pay,
     })),
-  ].sort(
-    (a, b) =>
-      new Date(a.date) - new Date(b.date)
-  );
+  ].sort((a, b) => new Date(a.date) - new Date(b.date));
 
   for (const event of allEvents) {
     runningBalance += event.debit - event.credit;
 
     ledgerRows.push({
       ...event,
-      runningBalance: parseFloat(
-        runningBalance.toFixed(2)
-      ),
+      runningBalance: parseFloat(runningBalance.toFixed(2)),
     });
   }
 
   const totals = invoices.reduce(
     (acc, inv) => ({
-      totalPurchases:
-        acc.totalPurchases + inv.grandTotal,
-      totalPaid:
-        acc.totalPaid + inv.paidAmount,
-      totalOutstanding:
-        acc.totalOutstanding +
-        inv.outstandingAmount,
+      totalPurchases: acc.totalPurchases + inv.grandTotal,
+      totalPaid: acc.totalPaid + inv.paidAmount,
+      totalOutstanding: acc.totalOutstanding + inv.outstandingAmount,
     }),
     {
       totalPurchases: 0,
       totalPaid: 0,
       totalOutstanding: 0,
-    }
+    },
   );
 
   return {
     ledgerRows,
     summary: {
-      totalPurchases: parseFloat(
-        totals.totalPurchases.toFixed(2)
-      ),
-      totalPaid: parseFloat(
-        totals.totalPaid.toFixed(2)
-      ),
-      outstanding: parseFloat(
-        totals.totalOutstanding.toFixed(2)
-      ),
+      totalPurchases: parseFloat(totals.totalPurchases.toFixed(2)),
+      totalPaid: parseFloat(totals.totalPaid.toFixed(2)),
+      outstanding: parseFloat(totals.totalOutstanding.toFixed(2)),
     },
   };
 }
@@ -319,7 +283,7 @@ export const seedLedgerAccountsForHotel = async (organizationId, userId) => {
         type: seed.type,
         description: seed.description,
         isActive: true,
-        system: true,      // 🔥 important
+        system: true, // 🔥 important
         createdBy: userId,
       });
     }

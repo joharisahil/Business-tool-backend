@@ -317,7 +317,7 @@ export const approveInvoice = asyncHandler(async (req, res) => {
     from: before.invoiceState,
     to: INVOICE_STATE.APPROVED,
     by: req.user._id,
-    note: req.body.note || "",
+    note: req.body?.note || "",
   });
 
   await invoice.save();
@@ -398,14 +398,14 @@ export const cancelInvoice = asyncHandler(async (req, res) => {
   invoice.invoiceState = INVOICE_STATE.CANCELLED;
   invoice.cancelledBy = req.user._id;
   invoice.cancelledAt = new Date();
-  invoice.cancellationReason = req.body.reason || "";
+  invoice.cancellationReason = req.body?.reason || "";
   invoice.updatedBy = req.user._id;
 
   invoice.stateLog.push({
     from: before.invoiceState,
     to: INVOICE_STATE.CANCELLED,
     by: req.user._id,
-    note: req.body.reason || "",
+    note: req.body?.reason || "",
   });
 
   await invoice.save();

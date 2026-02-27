@@ -159,7 +159,7 @@ journalEntrySchema.pre("save", function (next) {
   this.totalDebit = parseFloat(debit.toFixed(2));
   this.totalCredit = parseFloat(credit.toFixed(2));
 
-  next();
+  
 });
 
 /* ── Guard: prevent updates to journal entries ─────────────────── */

@@ -36,7 +36,7 @@ export const getTrialBalance = asyncHandler(async (req, res) => {
   const trialBalance = await ledgerService.getTrialBalance(
     req.user.organizationId,
     fromDate,
-    toDate
+    toDate,
   );
 
   res.json({ success: true, data: trialBalance });

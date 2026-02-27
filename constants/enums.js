@@ -7,14 +7,25 @@
 // ROLES
 // ─────────────────────────────────────────────────────────
 export const ROLES = Object.freeze({
-  MD: "MD",
-  GM: "GM",
+  ADMIN: "admin",
+  MANAGER: "manager",
+  STAFF: "staff",
 });
 
 export const ROLE_HIERARCHY = Object.freeze({
-  [ROLES.GM]: 1,
-  [ROLES.MD]: 2,
+  [ROLES.STAFF]: 1,
+  [ROLES.MANAGER]: 2,
+  [ROLES.ADMIN]: 3,
 });
+// export const ROLES = Object.freeze({
+//   MD: "MD",
+//   GM: "GM",
+// });
+
+// export const ROLE_HIERARCHY = Object.freeze({
+//   [ROLES.GM]: 1,
+//   [ROLES.MD]: 2,
+// });
 
 // ─────────────────────────────────────────────────────────
 // INVENTORY

@@ -252,40 +252,36 @@ export async function stockAdjust({
   }).session(session);
 
   if (!item)
-    throw new Error(
-      MSG.NOT_FOUND("Inventory item")
-    );
+    throw new Error(MSG.NOT_FOUND("Inventory item"));
 
-  const currentStock =
-    await getCurrentStock(
-      organizationId,
-      item_id,
-      session
-    );
+  const qty = Math.abs(parseFloat(quantity));
+
+  if (!qty || qty <= 0)
+    throw new Error("Quantity must be positive");
+
+  const currentStock = await getCurrentStock(
+    organizationId,
+    item_id,
+    session
+  );
 
   const balanceBefore = currentStock;
 
-  if (
-    adjustmentType === "OUT" &&
-    quantity > currentStock
-  ) {
-    throw new Error(
-      MSG.INSUFFICIENT_STOCK(
-        item.name,
-        currentStock,
-        quantity
-      )
-    );
+  let balanceAfter;
+
+  if (adjustmentType === "IN") {
+    balanceAfter = parseFloat((currentStock + qty).toFixed(3));
+  } else if (adjustmentType === "OUT") {
+    if (qty > currentStock) {
+      throw new Error(
+        MSG.INSUFFICIENT_STOCK(item.name, currentStock, qty)
+      );
+    }
+
+    balanceAfter = parseFloat((currentStock - qty).toFixed(3));
+  } else {
+    throw new Error("Invalid adjustment type");
   }
-
-  const signedQty =
-    adjustmentType === "IN"
-      ? quantity
-      : -quantity;
-
-  const balanceAfter = parseFloat(
-    (currentStock + signedQty).toFixed(3)
-  );
 
   const [txn] = await StockTransaction.create(
     [
@@ -296,7 +292,7 @@ export async function stockAdjust({
         itemSku: item.sku,
         type: TRANSACTION_TYPE.ADJUSTMENT,
         referenceType,
-        quantity: signedQty,
+        quantity: qty,   // ✅ ALWAYS POSITIVE
         balanceAfter,
         reference_id,
         notes,

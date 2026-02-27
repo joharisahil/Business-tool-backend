@@ -23,150 +23,150 @@ import * as dashboardCtrl from "../controllers/dashboardController.js";
 
 const router = express.Router();
 
-const GM_MD = [ROLES.GM, ROLES.MD];
-const MD = [ROLES.MD];
+const ADMIN_ONLY = [ROLES.ADMIN];
+const MANAGER_ADMIN = [ROLES.ADMIN, ROLES.MANAGER];
 
 // Apply JWT protection to all routes
 router.use(protect);
 
 // ── Dashboard ─────────────────────────────────────────────────────
-router.get("/dashboard", authorize(...GM_MD), dashboardCtrl.getDashboard);
+router.get("/dashboard", authorize(...MANAGER_ADMIN), dashboardCtrl.getDashboard);
 
 // ── Categories ────────────────────────────────────────────────────
-router.get("/categories", authorize(...GM_MD), categoryCtrl.listCategories);
-router.post("/categories", authorize(...GM_MD), categoryCtrl.createCategory);
-router.put("/categories/:id", authorize(...GM_MD), categoryCtrl.updateCategory);
+router.get("/categories", authorize(...MANAGER_ADMIN), categoryCtrl.listCategories);
+router.post("/categories", authorize(...MANAGER_ADMIN), categoryCtrl.createCategory);
+router.put("/categories/:id", authorize(...MANAGER_ADMIN), categoryCtrl.updateCategory);
 router.patch(
   "/categories/:id/toggle",
-  authorize(...GM_MD),
+  authorize(...MANAGER_ADMIN),
   categoryCtrl.toggleCategory,
 );
 
 // ── Inventory Items ───────────────────────────────────────────────
-router.get("/items", authorize(...GM_MD), itemCtrl.listItems);
-router.get("/items/:id", authorize(...GM_MD), itemCtrl.getItem);
-router.post("/items", authorize(...GM_MD), itemCtrl.createItem);
-router.put("/items/:id", authorize(...GM_MD), itemCtrl.updateItem);
-router.patch("/items/:id/toggle", authorize(...GM_MD), itemCtrl.toggleItem);
+router.get("/items", authorize(...MANAGER_ADMIN), itemCtrl.listItems);
+router.get("/items/:id", authorize(...MANAGER_ADMIN), itemCtrl.getItem);
+router.post("/items", authorize(...MANAGER_ADMIN), itemCtrl.createItem);
+router.put("/items/:id", authorize(...MANAGER_ADMIN), itemCtrl.updateItem);
+router.patch("/items/:id/toggle", authorize(...MANAGER_ADMIN), itemCtrl.toggleItem);
 router.get(
   "/items/:id/stock-history",
-  authorize(...GM_MD),
+  authorize(...MANAGER_ADMIN),
   itemCtrl.getStockHistory,
 );
 
 // ── Vendors ───────────────────────────────────────────────────────
-router.get("/vendors", authorize(...GM_MD), vendorCtrl.listVendors);
-router.get("/vendors/:id", authorize(...GM_MD), vendorCtrl.getVendor);
-router.post("/vendors", authorize(...GM_MD), vendorCtrl.createVendor);
-router.put("/vendors/:id", authorize(...GM_MD), vendorCtrl.updateVendor);
+router.get("/vendors", authorize(...MANAGER_ADMIN), vendorCtrl.listVendors);
+router.get("/vendors/:id", authorize(...MANAGER_ADMIN), vendorCtrl.getVendor);
+router.post("/vendors", authorize(...MANAGER_ADMIN), vendorCtrl.createVendor);
+router.put("/vendors/:id", authorize(...MANAGER_ADMIN), vendorCtrl.updateVendor);
 router.patch(
   "/vendors/:id/toggle",
-  authorize(...GM_MD),
+  authorize(...MANAGER_ADMIN),
   vendorCtrl.toggleVendor,
 );
 router.get(
   "/vendors/:id/ledger",
-  authorize(...GM_MD),
+  authorize(...MANAGER_ADMIN),
   vendorCtrl.getVendorLedger,
 );
 router.get(
   "/vendors/:vendorId/outstanding",
-  authorize(...GM_MD),
+  authorize(...MANAGER_ADMIN),
   paymentCtrl.getVendorOutstanding,
 );
 
 // ── Purchase Invoices ─────────────────────────────────────────────
-router.get("/invoices", authorize(...GM_MD), invoiceCtrl.listInvoices);
-router.get("/invoices/:id", authorize(...GM_MD), invoiceCtrl.getInvoice);
-router.post("/invoices", authorize(...GM_MD), invoiceCtrl.createInvoice);
-router.put("/invoices/:id", authorize(...GM_MD), invoiceCtrl.updateInvoice);
+router.get("/invoices", authorize(...MANAGER_ADMIN), invoiceCtrl.listInvoices);
+router.get("/invoices/:id", authorize(...MANAGER_ADMIN), invoiceCtrl.getInvoice);
+router.post("/invoices", authorize(...MANAGER_ADMIN), invoiceCtrl.createInvoice);
+router.put("/invoices/:id", authorize(...MANAGER_ADMIN), invoiceCtrl.updateInvoice);
 router.patch(
   "/invoices/:id/approve",
-  authorize(...GM_MD),
+  authorize(...MANAGER_ADMIN),
   invoiceCtrl.approveInvoice,
 );
 router.patch(
   "/invoices/:id/post",
-  authorize(...GM_MD),
+  authorize(...MANAGER_ADMIN),
   invoiceCtrl.postInvoice,
 );
 router.patch(
   "/invoices/:id/cancel",
-  authorize(...GM_MD),
+  authorize(...MANAGER_ADMIN),
   invoiceCtrl.cancelInvoice,
 );
 
 // ── Payments ──────────────────────────────────────────────────────
 router.post(
   "/invoices/:invoiceId/payments",
-  authorize(...GM_MD),
+  authorize(...MANAGER_ADMIN),
   paymentCtrl.recordPayment,
 );
 router.get(
   "/invoices/:invoiceId/payments",
-  authorize(...GM_MD),
+  authorize(...MANAGER_ADMIN),
   paymentCtrl.getPaymentHistory,
 );
 
 // ── Stock ─────────────────────────────────────────────────────────
-router.get("/stock/summary", authorize(...GM_MD), stockCtrl.getStockSummary);
+router.get("/stock/summary", authorize(...MANAGER_ADMIN), stockCtrl.getStockSummary);
 router.get(
   "/stock/transactions",
-  authorize(...GM_MD),
+  authorize(...MANAGER_ADMIN),
   stockCtrl.getTransactions,
 );
-router.get("/stock/expiry", authorize(...GM_MD), stockCtrl.getExpiryDashboard);
+router.get("/stock/expiry", authorize(...MANAGER_ADMIN), stockCtrl.getExpiryDashboard);
 router.post(
   "/stock/mark-expired",
-  authorize(...MD),
+  authorize(...MANAGER_ADMIN),
   stockCtrl.markExpiredBatches,
 );
 
 // ── Stock Adjustments ─────────────────────────────────────────────
 router.post(
   "/stock/adjustments",
-  authorize(...GM_MD),
+  authorize(...MANAGER_ADMIN),
   adjustmentCtrl.createAdjustment,
 );
 router.get(
   "/stock/adjustments",
-  authorize(...GM_MD),
+  authorize(...MANAGER_ADMIN),
   adjustmentCtrl.listAdjustments,
 );
 
 // ── Credit Notes ──────────────────────────────────────────────────
 router.post(
   "/credit-notes",
-  authorize(...GM_MD),
+  authorize(...MANAGER_ADMIN),
   creditNoteCtrl.createCreditNote,
 );
 router.get(
   "/credit-notes",
-  authorize(...GM_MD),
+  authorize(...MANAGER_ADMIN),
   creditNoteCtrl.listCreditNotes,
 );
 
 // ── General Ledger ────────────────────────────────────────────────
-router.get("/ledger/accounts", authorize(...GM_MD), ledgerCtrl.listAccounts);
-router.post("/ledger/accounts", authorize(...MD), ledgerCtrl.createAccount);
-router.post("/ledger/accounts/seed", authorize(...MD), ledgerCtrl.seedAccounts);
+router.get("/ledger/accounts", authorize(...MANAGER_ADMIN), ledgerCtrl.listAccounts);
+router.post("/ledger/accounts", authorize(...MANAGER_ADMIN), ledgerCtrl.createAccount);
+router.post("/ledger/accounts/seed", authorize(...MANAGER_ADMIN), ledgerCtrl.seedAccounts);
 router.get(
   "/ledger/trial-balance",
-  authorize(...GM_MD),
+  authorize(...MANAGER_ADMIN),
   ledgerCtrl.getTrialBalance,
 );
 router.get(
   "/ledger/accounts/:id/drilldown",
-  authorize(...GM_MD),
+  authorize(...MANAGER_ADMIN),
   ledgerCtrl.getAccountDrilldown,
 );
 
 // ── Journal Entries ───────────────────────────────────────────────
-router.get("/journal", authorize(...GM_MD), journalCtrl.listJournalEntries);
-router.get("/journal/:id", authorize(...GM_MD), journalCtrl.getJournalEntry);
-router.post("/journal/:id/reverse", authorize(...MD), journalCtrl.reverseEntry);
+router.get("/journal", authorize(...MANAGER_ADMIN), journalCtrl.listJournalEntries);
+router.get("/journal/:id", authorize(...MANAGER_ADMIN), journalCtrl.getJournalEntry);
+router.post("/journal/:id/reverse", authorize(...MANAGER_ADMIN), journalCtrl.reverseEntry);
 
 // ── Audit Trail ───────────────────────────────────────────────────
-router.get("/audit", authorize(...GM_MD), auditCtrl.getAuditLogs);
+router.get("/audit", authorize(...MANAGER_ADMIN), auditCtrl.getAuditLogs);
 
 export default router;

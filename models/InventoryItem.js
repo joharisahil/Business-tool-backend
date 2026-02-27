@@ -121,7 +121,7 @@ inventoryItemSchema.pre('save', function (next) {
   if (this.isPerishable && !this.shelfLifeDays) {
     return next(new Error('shelfLifeDays is required for perishable items.'));
   }
-  next();
+  
 });
 
 export default mongoose.model('InventoryItem', inventoryItemSchema);
