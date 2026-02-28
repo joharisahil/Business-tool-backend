@@ -20,6 +20,7 @@ import * as journalCtrl from "../controllers/journalController.js";
 import * as creditNoteCtrl from "../controllers/creditNoteController.js";
 import * as auditCtrl from "../controllers/auditController.js";
 import * as dashboardCtrl from "../controllers/dashboardController.js";
+import * as salesCtrl from "../controllers/salesInvoiceController.js";
 
 const router = express.Router();
 
@@ -168,5 +169,56 @@ router.post("/journal/:id/reverse", authorize(...MANAGER_ADMIN), journalCtrl.rev
 
 // ── Audit Trail ───────────────────────────────────────────────────
 router.get("/audit", authorize(...MANAGER_ADMIN), auditCtrl.getAuditLogs);
+
+// ── Sales Invoices ─────────────────────────────────────────────
+router.get(
+  "/sales-invoices",
+  authorize(...MANAGER_ADMIN),
+  salesCtrl.listSalesInvoices
+);
+
+router.get(
+  "/sales-invoices/:id",
+  authorize(...MANAGER_ADMIN),
+  salesCtrl.getSalesInvoice
+);
+
+router.post(
+  "/sales-invoices",
+  authorize(...MANAGER_ADMIN),
+  salesCtrl.createSalesInvoice
+);
+
+router.patch(
+  "/sales-invoices/:id/approve",
+  authorize(...MANAGER_ADMIN),
+  salesCtrl.approveSalesInvoice
+);
+
+router.patch(
+  "/sales-invoices/:id/post",
+  authorize(...MANAGER_ADMIN),
+  salesCtrl.postSalesInvoiceController
+);
+
+router.patch(
+  "/sales-invoices/:id/cancel",
+  authorize(...MANAGER_ADMIN),
+  salesCtrl.cancelSalesInvoice
+);
+
+// ── Sales Payments ─────────────────────────────────────
+
+router.post(
+  "/sales-invoices/:invoiceId/payments",
+  authorize(...MANAGER_ADMIN),
+  salesCtrl.recordSalesPayment
+);
+
+router.get(
+  "/sales-invoices/:invoiceId/payments",
+  authorize(...MANAGER_ADMIN),
+  salesCtrl.getSalesPaymentHistory
+);
 
 export default router;

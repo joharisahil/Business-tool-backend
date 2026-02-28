@@ -31,8 +31,18 @@ export const ROLE_HIERARCHY = Object.freeze({
 // INVENTORY
 // ─────────────────────────────────────────────────────────
 export const UNIT_TYPES = Object.freeze([
-  "KG", "G", "L", "ML", "PCS", "BOX", "PACK",
-  "DOZEN", "BOTTLE", "CAN", "SACHET", "PLATE",
+  "KG",
+  "G",
+  "L",
+  "ML",
+  "PCS",
+  "BOX",
+  "PACK",
+  "DOZEN",
+  "BOTTLE",
+  "CAN",
+  "SACHET",
+  "PLATE",
 ]);
 
 // ─────────────────────────────────────────────────────────
@@ -94,6 +104,8 @@ export const REFERENCE_TYPE = Object.freeze({
   MANUAL: "MANUAL",
   ADJUSTMENT: "ADJUSTMENT",
   CREDIT_NOTE: "CREDIT_NOTE",
+  SALES: "SALES",
+  SALES_CREDIT_NOTE: "SALES_CREDIT_NOTE",
 });
 
 export const ADJUSTMENT_REASON = Object.freeze({
@@ -128,6 +140,8 @@ export const JOURNAL_REFERENCE_TYPE = Object.freeze({
   ADJUSTMENT: "ADJUSTMENT",
   REVERSAL: "REVERSAL",
   OPENING_BALANCE: "OPENING_BALANCE",
+  SALES_INVOICE: "SALES_INVOICE",
+  SALES_CREDIT_NOTE: "SALES_CREDIT_NOTE",
 });
 
 // ─────────────────────────────────────────────────────────
@@ -157,6 +171,8 @@ export const AUDIT_ENTITY_TYPE = Object.freeze({
   INVENTORY_BATCH: "INVENTORY_BATCH",
   LEDGER_ACCOUNT: "LEDGER_ACCOUNT",
   USER: "USER",
+  SALES_INVOICE: "SALES_INVOICE",
+  SALES_CREDIT_NOTE: "SALES_CREDIT_NOTE",
 });
 
 export const AUDIT_ACTION = Object.freeze({
@@ -181,10 +197,24 @@ export const AUDIT_ACTION = Object.freeze({
 // ─────────────────────────────────────────────────────────
 export const DEFAULT_LEDGER_CODES = Object.freeze({
   INVENTORY_ASSET: "1100",
+
   GST_INPUT_CGST: "1210",
   GST_INPUT_SGST: "1220",
   GST_INPUT_IGST: "1230",
+
   ACCOUNTS_PAYABLE: "2100",
+  ACCOUNTS_RECEIVABLE: "1300",
+
   CASH: "1010",
   BANK: "1020",
+
+  // 🔥 SALES SYSTEM
+  SALES_REVENUE: "4100",
+  SALES_RETURN: "4200",
+
+  GST_OUTPUT_CGST: "2110",
+  GST_OUTPUT_SGST: "2120",
+  GST_OUTPUT_IGST: "2130",
+
+  COGS_EXPENSE: "5100",
 });

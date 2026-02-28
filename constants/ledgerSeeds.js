@@ -39,10 +39,13 @@ export const LEDGER_SEEDS = [
   { code: "3200", name: "Retained Earnings",       type: LEDGER_ACCOUNT_TYPE.EQUITY,    description: "Accumulated profits" },
 
   // ── REVENUE ───────────────────────────────────────────────────
-  { code: "4100", name: "Room Revenue",            type: LEDGER_ACCOUNT_TYPE.REVENUE,   description: "Revenue from room bookings" },
-  { code: "4200", name: "F&B Revenue",             type: LEDGER_ACCOUNT_TYPE.REVENUE,   description: "Food and beverage sales" },
-  { code: "4300", name: "Other Revenue",           type: LEDGER_ACCOUNT_TYPE.REVENUE,   description: "Laundry, spa, ancillary services" },
-
+  // { code: "4100", name: "Room Revenue",            type: LEDGER_ACCOUNT_TYPE.REVENUE,   description: "Revenue from room bookings" },
+  // { code: "4200", name: "F&B Revenue",             type: LEDGER_ACCOUNT_TYPE.REVENUE,   description: "Food and beverage sales" },
+  // { code: "4300", name: "Other Revenue",           type: LEDGER_ACCOUNT_TYPE.REVENUE,   description: "Laundry, spa, ancillary services" },
+  // ── REVENUE ───────────────────────────────────────────────────
+{ code: "4100", name: "Sales Revenue",        type: LEDGER_ACCOUNT_TYPE.REVENUE, description: "Revenue from product sales" },
+{ code: "4200", name: "Sales Returns",        type: LEDGER_ACCOUNT_TYPE.REVENUE, description: "Customer returns and sales reversals" },
+{ code: "4300", name: "Other Income",         type: LEDGER_ACCOUNT_TYPE.REVENUE, description: "Non-operating income" },
   // ── EXPENSE ───────────────────────────────────────────────────
   { code: "5100", name: "Cost of Goods Sold",      type: LEDGER_ACCOUNT_TYPE.EXPENSE,   description: "Direct cost of inventory consumed" },
   { code: "5110", name: "Food Cost",               type: LEDGER_ACCOUNT_TYPE.EXPENSE,   description: "Cost of food consumed in F&B" },
