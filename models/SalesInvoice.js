@@ -1,34 +1,101 @@
 import mongoose from "mongoose";
-import { INVOICE_STATE, PAYMENT_STATUS, PAYMENT_METHOD } from "../constants/enums.js";
+import {
+  SALES_INVOICE_STATE,
+  SALES_PAYMENT_STATUS,
+  SALES_CATEGORY,
+  PAYMENT_TERMS,
+} from "../constants/enums.js";
 
-const salesInvoiceItemSchema = new mongoose.Schema(
+const salesLineItemSchema = new mongoose.Schema(
   {
     item_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "InventoryItem",
+      default: null,
+    },
+
+    description: {
+      type: String,
+      required: [true, "Line item description is required"],
+      trim: true,
+    },
+
+    category: {
+      type: String,
+      enum: Object.values(SALES_CATEGORY),
       required: true,
     },
 
-    itemName: { type: String, required: true },
-    itemSku: { type: String },
+    hsnSacCode: {
+      type: String,
+      trim: true,
+      default: "",
+    },
 
-    quantity: { type: Number, required: true },
-    unitPrice: { type: Number, required: true },
-    gstPercentage: { type: Number, required: true },
+    quantity: {
+      type: Number,
+      required: true,
+      min: [0.01, "Quantity must be positive"],
+    },
 
-    totalAmount: { type: Number, required: true },
+    unitPrice: {
+      type: Number,
+      required: true,
+      min: [0, "Unit price cannot be negative"],
+    },
 
-    // FIFO Cost Snapshot
-    costPriceSnapshot: { type: Number },
-    costAmountSnapshot: { type: Number },
+    discount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    taxableAmount: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+
+    gstPercentage: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+
+    cgstAmount: { type: Number, default: 0 },
+    sgstAmount: { type: Number, default: 0 },
+    igstAmount: { type: Number, default: 0 },
+
+    totalAmount: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+
+    deductStock: {
+      type: Boolean,
+      default: false,
+    },
   },
   { _id: true }
 );
 
+const stateLogSchema = new mongoose.Schema(
+  {
+    from: { type: String },
+    to: { type: String, required: true },
+    by: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    at: { type: Date, default: Date.now },
+    note: { type: String, trim: true, default: "" },
+  },
+  { _id: false }
+);
+
 const salesInvoiceSchema = new mongoose.Schema(
   {
-    organizationId: {
+    hotel_id: {
       type: mongoose.Schema.Types.ObjectId,
+      ref: "Hotel",
       required: true,
       index: true,
     },
@@ -36,99 +103,105 @@ const salesInvoiceSchema = new mongoose.Schema(
     invoiceNumber: {
       type: String,
       required: true,
-      unique: true,
+      trim: true,
+      uppercase: true,
     },
 
-    customerName: { type: String, required: true },
-    customerGSTIN: { type: String },
-
-    // 🔥 NEW FIELD (Important)
-    paymentMode: {
-      type: String,
-      enum: ["CASH", "BANK", "UPI", "CREDIT"],
+    customer_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Customer",
       required: true,
+      index: true,
     },
 
-    paymentMethod: {
+    customerName: {
       type: String,
-      enum: Object.values(PAYMENT_METHOD),
+      required: true,
+      trim: true,
     },
 
-    paymentReference: { type: String },
-    paymentDate: { type: Date },
+    customerGSTIN: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    roomNumber: { type: String, trim: true, default: "" },
+    bookingRef: { type: String, trim: true, default: "" },
 
     items: {
-      type: [salesInvoiceItemSchema],
-      required: true,
-      validate: [(val) => val.length > 0, "Invoice must have items"],
+      type: [salesLineItemSchema],
+      validate: {
+        validator: (items) => items && items.length >= 1,
+        message: "Sales invoice must have at least one line item",
+      },
     },
 
-    // Totals
-    subtotal: { type: Number, required: true },
-    gstAmount: { type: Number, required: true },
+    subtotal: { type: Number, required: true, min: 0 },
+    totalDiscount: { type: Number, default: 0, min: 0 },
 
     taxBreakdown: {
       cgst: { type: Number, default: 0 },
       sgst: { type: Number, default: 0 },
       igst: { type: Number, default: 0 },
+      totalTax: { type: Number, default: 0 },
     },
 
-    grandTotal: { type: Number, required: true },
+    grandTotal: { type: Number, required: true, min: 0 },
 
-    // Payment Tracking
-    paidAmount: { type: Number, default: 0 },
-    outstandingAmount: { type: Number, required: true },
+    invoiceState: {
+      type: String,
+      enum: Object.values(SALES_INVOICE_STATE),
+      default: SALES_INVOICE_STATE.DRAFT,
+      index: true,
+    },
 
     paymentStatus: {
       type: String,
-      enum: Object.values(PAYMENT_STATUS),
-      default: PAYMENT_STATUS.UNPAID,
+      enum: Object.values(SALES_PAYMENT_STATUS),
+      default: SALES_PAYMENT_STATUS.UNPAID,
+      index: true,
     },
 
-    // Lifecycle
-    invoiceState: {
+    paidAmount: { type: Number, default: 0 },
+    outstandingAmount: { type: Number, default: 0 },
+    advanceAmount: { type: Number, default: 0 },
+
+    paymentTerms: {
       type: String,
-      enum: Object.values(INVOICE_STATE),
-      default: INVOICE_STATE.DRAFT,
+      enum: Object.values(PAYMENT_TERMS),
+      default: PAYMENT_TERMS.IMMEDIATE,
     },
+
+    dueDate: { type: Date, default: null },
 
     journalEntry_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "JournalEntry",
     },
 
-    // Audit Fields
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
+    notes: {
+      type: String,
+      trim: true,
+      maxlength: 2000,
+      default: "",
     },
 
+    stateLog: [stateLogSchema],
+
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     approvedAt: { type: Date },
-
     postedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     postedAt: { type: Date },
-
     cancelledBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     cancelledAt: { type: Date },
-
-    stateLog: [
-      {
-        from: String,
-        to: String,
-        by: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-        at: { type: Date, default: Date.now },
-        note: String,
-      },
-    ],
-
-    notes: { type: String },
+    cancellationReason: { type: String, trim: true },
   },
   { timestamps: true }
 );
 
-salesInvoiceSchema.index({ organizationId: 1, createdAt: -1 });
-salesInvoiceSchema.index({ organizationId: 1, invoiceState: 1 });
+salesInvoiceSchema.index({ hotel_id: 1, invoiceNumber: 1 }, { unique: true });
 
 export default mongoose.model("SalesInvoice", salesInvoiceSchema);

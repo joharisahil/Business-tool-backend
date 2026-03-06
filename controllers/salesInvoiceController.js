@@ -287,3 +287,306 @@ export const getSalesPaymentHistory = asyncHandler(async (req, res) => {
     },
   });
 });
+
+export const updateSalesInvoice = asyncHandler(async (req, res) => {
+  const invoice = await SalesInvoice.findOne({
+    _id: req.params.id,
+    organizationId: req.user.organizationId,
+  });
+
+  if (!invoice)
+    return res.status(404).json({
+      success: false,
+      message: MSG.INVOICE_NOT_FOUND,
+    });
+
+  // Only draft invoices can be edited
+  if (invoice.invoiceState !== INVOICE_STATE.DRAFT)
+    return res.status(400).json({
+      success: false,
+      message: "Only DRAFT invoices can be edited.",
+    });
+
+  const { items, notes, customerName, customerGSTIN, paymentMode } = req.body;
+
+  // Update simple fields
+  if (notes !== undefined) invoice.notes = notes;
+  if (customerName !== undefined) invoice.customerName = customerName;
+  if (customerGSTIN !== undefined) invoice.customerGSTIN = customerGSTIN;
+  if (paymentMode !== undefined) invoice.paymentMode = paymentMode;
+
+  // If items changed → recalculate totals
+  if (items && items.length > 0) {
+    const calc = taxService.calculateInvoiceTotals(items);
+
+    invoice.items = calc.items;
+    invoice.subtotal = calc.subtotal;
+    invoice.gstAmount = calc.gstAmount;
+    invoice.taxBreakdown = calc.taxBreakdown;
+    invoice.grandTotal = calc.grandTotal;
+
+    // adjust outstanding based on already paid amount
+    invoice.outstandingAmount = calc.grandTotal - (invoice.paidAmount || 0);
+  }
+
+  invoice.updatedBy = req.user._id;
+
+  await invoice.save();
+
+  res.json({
+    success: true,
+    data: invoice,
+  });
+});
+// /**
+//  * @controller salesInvoiceController.js
+//  * @description Sales invoice CRUD, state transitions, and listing.
+//  */
+// 'use strict';
+
+// const mongoose      = require('mongoose');
+// const SalesInvoice  = require('../models/SalesInvoice');
+// const Customer      = require('../models/Customer');
+// const taxService    = require('../services/taxService');
+// const auditService  = require('../services/auditService');
+// const salesPostingService = require('../services/salesInvoicePostingService');
+
+// const {
+//   SALES_INVOICE_STATE,
+//   SALES_INVOICE_TRANSITIONS,
+//   AUDIT_ENTITY_TYPE,
+//   AUDIT_ACTION,
+// } = require('../constants/enums');
+
+// // ── Sequential invoice number generator ──────────────────────────
+// async function generateSalesInvoiceNumber(hotel_id) {
+//   const year   = new Date().getFullYear();
+//   const prefix = `HOTEL-SAL-${year}-`;
+//   const last   = await SalesInvoice
+//     .findOne({ hotel_id, invoiceNumber: { $regex: `^${prefix}` } })
+//     .sort({ invoiceNumber: -1 })
+//     .select('invoiceNumber');
+//   let seq = 1;
+//   if (last) {
+//     const parts = last.invoiceNumber.split('-');
+//     seq = parseInt(parts[parts.length - 1], 10) + 1;
+//   }
+//   return `${prefix}${String(seq).padStart(4, '0')}`;
+// }
+
+// // ── Duplicate prevention ─────────────────────────────────────────
+// function generateDuplicateKey(invoice) {
+//   return `${invoice.customer_id}_${invoice.items.map(i => `${i.description}_${i.quantity}_${i.unitPrice}`).join('|')}`;
+// }
+
+// exports.listInvoices = async (req, res) => {
+//   try {
+//     const { state, customer_id, paymentStatus, fromDate, toDate, page = 1, limit = 50 } = req.query;
+//     const filter = { hotel_id: req.user.hotel_id };
+//     if (state)         filter.invoiceState = state;
+//     if (customer_id)   filter.customer_id = customer_id;
+//     if (paymentStatus) filter.paymentStatus = paymentStatus;
+//     if (fromDate || toDate) {
+//       filter.createdAt = {};
+//       if (fromDate) filter.createdAt.$gte = new Date(fromDate);
+//       if (toDate)   filter.createdAt.$lte = new Date(toDate);
+//     }
+
+//     const skip = (parseInt(page) - 1) * parseInt(limit);
+//     const [data, total] = await Promise.all([
+//       SalesInvoice.find(filter)
+//         .sort({ createdAt: -1 })
+//         .skip(skip)
+//         .limit(parseInt(limit))
+//         .populate('customer_id', 'name email phone customerType'),
+//       SalesInvoice.countDocuments(filter),
+//     ]);
+
+//     res.json({ success: true, data, total, page: parseInt(page), pages: Math.ceil(total / parseInt(limit)) });
+//   } catch (err) {
+//     res.status(500).json({ success: false, message: err.message });
+//   }
+// };
+
+// exports.getInvoice = async (req, res) => {
+//   try {
+//     const invoice = await SalesInvoice
+//       .findOne({ _id: req.params.id, hotel_id: req.user.hotel_id })
+//       .populate('customer_id', 'name email phone gstin customerType');
+//     if (!invoice) return res.status(404).json({ success: false, message: 'Sales invoice not found.' });
+//     res.json({ success: true, data: invoice });
+//   } catch (err) {
+//     res.status(500).json({ success: false, message: err.message });
+//   }
+// };
+
+// exports.createInvoice = async (req, res) => {
+//   try {
+//     const { customer_id, items, roomNumber, bookingRef, notes, paymentTerms } = req.body;
+//     const hotel_id = req.user.hotel_id;
+
+//     const customer = await Customer.findOne({ _id: customer_id, hotel_id });
+//     if (!customer) return res.status(404).json({ success: false, message: 'Customer not found.' });
+
+//     // Recalculate totals server-side
+//     let subtotal = 0, totalDiscount = 0;
+//     const taxBreakdown = { cgst: 0, sgst: 0, igst: 0, totalTax: 0 };
+//     const processedItems = items.map(item => {
+//       const lineSubtotal = item.quantity * item.unitPrice;
+//       const discount     = item.discount || 0;
+//       const taxable      = lineSubtotal - discount;
+//       const gstPct       = item.gstPercentage || 0;
+//       const isInterState = false; // Simplified — resolve via GSTIN comparison in production
+//       const halfRate     = gstPct / 2;
+//       const cgst = isInterState ? 0 : parseFloat((taxable * halfRate / 100).toFixed(2));
+//       const sgst = isInterState ? 0 : parseFloat((taxable * halfRate / 100).toFixed(2));
+//       const igst = isInterState ? parseFloat((taxable * gstPct / 100).toFixed(2)) : 0;
+//       const total = parseFloat((taxable + cgst + sgst + igst).toFixed(2));
+
+//       subtotal += taxable;
+//       totalDiscount += discount;
+//       taxBreakdown.cgst += cgst;
+//       taxBreakdown.sgst += sgst;
+//       taxBreakdown.igst += igst;
+//       taxBreakdown.totalTax += cgst + sgst + igst;
+
+//       return {
+//         ...item,
+//         taxableAmount: taxable,
+//         cgstAmount: cgst,
+//         sgstAmount: sgst,
+//         igstAmount: igst,
+//         totalAmount: total,
+//       };
+//     });
+
+//     const grandTotal = parseFloat((subtotal + taxBreakdown.totalTax).toFixed(2));
+//     const invoiceNumber = await generateSalesInvoiceNumber(hotel_id);
+
+//     const invoice = await SalesInvoice.create({
+//       hotel_id,
+//       invoiceNumber,
+//       customer_id,
+//       customerName:  customer.name,
+//       customerGSTIN: customer.gstin || '',
+//       roomNumber:    roomNumber || '',
+//       bookingRef:    bookingRef || '',
+//       items:         processedItems,
+//       subtotal:      parseFloat(subtotal.toFixed(2)),
+//       totalDiscount: parseFloat(totalDiscount.toFixed(2)),
+//       taxBreakdown,
+//       grandTotal,
+//       outstandingAmount: grandTotal,
+//       paymentTerms:  paymentTerms || customer.paymentTerms,
+//       notes:         notes || '',
+//       stateLog:      [{ to: SALES_INVOICE_STATE.DRAFT, by: req.user._id, note: 'Invoice created' }],
+//       createdBy:     req.user._id,
+//       updatedBy:     req.user._id,
+//     });
+
+//     await auditService.log({
+//       hotel_id,
+//       entityType:      AUDIT_ENTITY_TYPE.SALES_INVOICE,
+//       entity_id:       invoice._id,
+//       entityReference: invoiceNumber,
+//       action:          AUDIT_ACTION.CREATED,
+//       description:     `Sales invoice ${invoiceNumber} created for ${customer.name}. Total: ₹${grandTotal}`,
+//       after:           invoice.toObject(),
+//       user:            req.user,
+//       ipAddress:       req.ip,
+//     });
+
+//     res.status(201).json({ success: true, data: invoice });
+//   } catch (err) {
+//     res.status(400).json({ success: false, message: err.message });
+//   }
+// };
+
+// exports.updateInvoice = async (req, res) => {
+//   try {
+//     const invoice = await SalesInvoice.findOne({ _id: req.params.id, hotel_id: req.user.hotel_id });
+//     if (!invoice) return res.status(404).json({ success: false, message: 'Sales invoice not found.' });
+//     if (invoice.invoiceState !== SALES_INVOICE_STATE.DRAFT) {
+//       return res.status(400).json({ success: false, message: 'Only DRAFT invoices can be edited.' });
+//     }
+
+//     const allowed = ['items', 'roomNumber', 'bookingRef', 'notes', 'paymentTerms', 'customer_id'];
+//     for (const key of allowed) {
+//       if (req.body[key] !== undefined) invoice[key] = req.body[key];
+//     }
+//     invoice.updatedBy = req.user._id;
+//     await invoice.save();
+
+//     res.json({ success: true, data: invoice });
+//   } catch (err) {
+//     res.status(400).json({ success: false, message: err.message });
+//   }
+// };
+
+// exports.approveInvoice = async (req, res) => {
+//   try {
+//     const invoice = await SalesInvoice.findOne({ _id: req.params.id, hotel_id: req.user.hotel_id });
+//     if (!invoice) return res.status(404).json({ success: false, message: 'Sales invoice not found.' });
+
+//     const allowed = SALES_INVOICE_TRANSITIONS[invoice.invoiceState];
+//     if (!allowed || !allowed.includes(SALES_INVOICE_STATE.APPROVED)) {
+//       return res.status(400).json({ success: false, message: `Cannot approve invoice in ${invoice.invoiceState} state.` });
+//     }
+
+//     await SalesInvoice.updateOne(
+//       { _id: invoice._id },
+//       {
+//         $set: { invoiceState: SALES_INVOICE_STATE.APPROVED, approvedBy: req.user._id, approvedAt: new Date(), updatedBy: req.user._id },
+//         $push: { stateLog: { from: invoice.invoiceState, to: SALES_INVOICE_STATE.APPROVED, by: req.user._id, note: 'Invoice approved' } },
+//       }
+//     );
+
+//     res.json({ success: true, message: 'Sales invoice approved.' });
+//   } catch (err) {
+//     res.status(500).json({ success: false, message: err.message });
+//   }
+// };
+
+// exports.postInvoice = async (req, res) => {
+//   try {
+//     const result = await salesPostingService.postSalesInvoice({
+//       hotel_id:  req.user.hotel_id,
+//       invoiceId: req.params.id,
+//       user:      req.user,
+//       ipAddress: req.ip,
+//     });
+//     res.json({ success: true, message: 'Sales invoice posted.', data: result });
+//   } catch (err) {
+//     res.status(400).json({ success: false, message: err.message });
+//   }
+// };
+
+// exports.cancelInvoice = async (req, res) => {
+//   try {
+//     const invoice = await SalesInvoice.findOne({ _id: req.params.id, hotel_id: req.user.hotel_id });
+//     if (!invoice) return res.status(404).json({ success: false, message: 'Sales invoice not found.' });
+
+//     const allowed = SALES_INVOICE_TRANSITIONS[invoice.invoiceState];
+//     if (!allowed || !allowed.includes(SALES_INVOICE_STATE.CANCELLED)) {
+//       return res.status(400).json({ success: false, message: `Cannot cancel invoice in ${invoice.invoiceState} state.` });
+//     }
+
+//     await SalesInvoice.updateOne(
+//       { _id: invoice._id },
+//       {
+//         $set: {
+//           invoiceState: SALES_INVOICE_STATE.CANCELLED,
+//           cancelledBy: req.user._id,
+//           cancelledAt: new Date(),
+//           cancellationReason: req.body.reason || '',
+//           updatedBy: req.user._id,
+//         },
+//         $push: { stateLog: { from: invoice.invoiceState, to: SALES_INVOICE_STATE.CANCELLED, by: req.user._id, note: req.body.reason || 'Cancelled' } },
+//       }
+//     );
+
+//     res.json({ success: true, message: 'Sales invoice cancelled.' });
+//   } catch (err) {
+//     res.status(500).json({ success: false, message: err.message });
+//   }
+// };

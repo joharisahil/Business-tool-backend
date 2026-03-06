@@ -21,6 +21,10 @@ import * as creditNoteCtrl from "../controllers/creditNoteController.js";
 import * as auditCtrl from "../controllers/auditController.js";
 import * as dashboardCtrl from "../controllers/dashboardController.js";
 import * as salesCtrl from "../controllers/salesInvoiceController.js";
+import * as customerCtrl from "../controllers/customerController.js";
+import * as salesCreditCtrl from "../controllers/salesCreditNoteController.js";
+import * as salesReportCtrl from "../controllers/salesReportController.js";
+import * as unitCtrl from "../controllers/unitController.js";
 
 const router = express.Router();
 
@@ -207,6 +211,11 @@ router.patch(
   salesCtrl.cancelSalesInvoice
 );
 
+router.put(
+  "/sales-invoices/:id",
+  authorize(...MANAGER_ADMIN),
+  salesCtrl.updateSalesInvoice
+);
 // ── Sales Payments ─────────────────────────────────────
 
 router.post(
@@ -221,4 +230,126 @@ router.get(
   salesCtrl.getSalesPaymentHistory
 );
 
+// ── Customers ───────────────────────────────────────────
+router.get(
+  "/customers",
+  authorize(...MANAGER_ADMIN),
+  customerCtrl.listCustomers
+);
+
+router.get(
+  "/customers/:id",
+  authorize(...MANAGER_ADMIN),
+  customerCtrl.getCustomer
+);
+
+router.post(
+  "/customers",
+  authorize(...MANAGER_ADMIN),
+  customerCtrl.createCustomer
+);
+
+router.put(
+  "/customers/:id",
+  authorize(...MANAGER_ADMIN),
+  customerCtrl.updateCustomer
+);
+
+router.patch(
+  "/customers/:id/toggle",
+  authorize(...MANAGER_ADMIN),
+  customerCtrl.toggleCustomer
+);
+
+router.get(
+  "/customers/:customerId/outstanding",
+  authorize(...MANAGER_ADMIN),
+  salesCtrl.getCustomerOutstanding
+);
+
+// ── Sales Credit Notes ─────────────────────────────
+router.post(
+  "/sales/credit-notes",
+  authorize(...MANAGER_ADMIN),
+  salesCreditCtrl.createSalesCreditNote
+);
+
+router.get(
+  "/sales/credit-notes",
+  authorize(...MANAGER_ADMIN),
+  salesCreditCtrl.listSalesCreditNotes
+);
+
+// ── Sales Reports ─────────────────────────────────
+router.get(
+  "/sales/reports/summary",
+  authorize(...MANAGER_ADMIN),
+  salesReportCtrl.getSalesSummary
+);
+
+router.get(
+  "/sales/reports/gst",
+  authorize(...MANAGER_ADMIN),
+  salesReportCtrl.getGSTReport
+);
+
+router.get(
+  "/sales/reports/receivable-aging",
+  authorize(...MANAGER_ADMIN),
+  salesReportCtrl.getReceivableAging
+);
+
+router.get(
+  "/sales/reports/daily-collection",
+  authorize(...MANAGER_ADMIN),
+  salesReportCtrl.getDailyCollection
+);
+
+router.get(
+  "/customers/:customerId/ledger",
+  authorize(...MANAGER_ADMIN),
+  salesReportCtrl.getCustomerLedger
+);
+// ── Unit Master ───────────────────────────────────
+router.get(
+  "/units",
+  authorize(...MANAGER_ADMIN),
+  unitCtrl.listUnits
+);
+
+router.get(
+  "/units/:id",
+  authorize(...MANAGER_ADMIN),
+  unitCtrl.getUnit
+);
+
+router.post(
+  "/units",
+  authorize(...MANAGER_ADMIN),
+  unitCtrl.createUnit
+);
+
+router.put(
+  "/units/:id",
+  authorize(...MANAGER_ADMIN),
+  unitCtrl.updateUnit
+);
+
+router.patch(
+  "/units/:id/toggle",
+  authorize(...MANAGER_ADMIN),
+  unitCtrl.toggleUnit
+);
+
+router.post(
+  "/units/convert",
+  authorize(...MANAGER_ADMIN),
+  unitCtrl.previewConversion
+);
+
+router.get(
+  "/units/:id/related",
+  authorize(...MANAGER_ADMIN),
+  unitCtrl.getRelatedUnits
+);
 export default router;
