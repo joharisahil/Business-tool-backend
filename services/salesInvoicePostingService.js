@@ -45,7 +45,7 @@ function getRevenueLedgerCode(category) {
  * Posts a sales invoice atomically.
  */
 export const postSalesInvoice = async ({
-  hotel_id,
+  organizationId,
   invoiceId,
   user,
   ipAddress = "",
@@ -58,7 +58,7 @@ export const postSalesInvoice = async ({
 
     // ── Step 1: Load and validate ────────────────────────────────
     const invoice = await SalesInvoice
-      .findOne({ _id: invoiceId, hotel_id })
+      .findOne({ _id: invoiceId, organizationId })
       .session(session);
 
     if (!invoice) throw new Error("Sales invoice not found.");
@@ -82,7 +82,7 @@ export const postSalesInvoice = async ({
       if (lineItem.deductStock && lineItem.item_id) {
 
         await stockService.stockOut({
-          hotel_id,
+          organizationId,
           item_id: lineItem.item_id,
           quantity: lineItem.quantity,
           referenceType: REFERENCE_TYPE.ROOM_USAGE,
@@ -171,7 +171,7 @@ export const postSalesInvoice = async ({
 
     // ── Step 4: Create journal entry ─────────────────────────────
     const journalEntry = await journalService.createEntry({
-      hotel_id,
+      organizationId,
       referenceType: JOURNAL_REFERENCE_TYPE.SALES_INVOICE,
       reference_id: invoice._id,
       referenceNumber: invoice.invoiceNumber,
@@ -211,7 +211,7 @@ export const postSalesInvoice = async ({
 
     // ── Step 6: Audit log ────────────────────────────────────────
     await auditService.log({
-      hotel_id,
+      organizationId,
       entityType: AUDIT_ENTITY_TYPE.SALES_INVOICE,
       entity_id: invoice._id,
       entityReference: invoice.invoiceNumber,

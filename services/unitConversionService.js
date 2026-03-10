@@ -10,7 +10,7 @@ import Unit from "../models/Unit.js";
  * Convert a quantity from one unit to the base unit.
  */
 export const convertToBase = async (
-  hotel_id,
+  organizationId,
   fromUnit_id,
   quantity,
   maxDepth = 10
@@ -18,7 +18,7 @@ export const convertToBase = async (
 
   const chain = [];
 
-  let currentUnit = await Unit.findOne({ _id: fromUnit_id, hotel_id });
+  let currentUnit = await Unit.findOne({ _id: fromUnit_id, organizationId });
 
   if (!currentUnit)
     throw new Error(`Unit not found: ${fromUnit_id}`);
@@ -39,7 +39,7 @@ export const convertToBase = async (
 
     currentUnit = await Unit.findOne({
       _id: currentUnit.baseUnit_id,
-      hotel_id,
+      organizationId,
     });
 
     if (!currentUnit)
@@ -70,12 +70,12 @@ export const convertToBase = async (
  * Convert from base unit to target unit
  */
 export const convertFromBase = async (
-  hotel_id,
+  organizationId,
   toUnit_id,
   baseQuantity
 ) => {
 
-  const targetUnit = await Unit.findOne({ _id: toUnit_id, hotel_id });
+  const targetUnit = await Unit.findOne({ _id: toUnit_id, organizationId });
 
   if (!targetUnit)
     throw new Error(`Target unit not found: ${toUnit_id}`);
@@ -92,7 +92,7 @@ export const convertFromBase = async (
 
     current = await Unit.findOne({
       _id: current.baseUnit_id,
-      hotel_id,
+      organizationId,
     });
 
     if (!current)
@@ -116,7 +116,7 @@ export const convertFromBase = async (
  * Convert between any two units
  */
 export const convert = async (
-  hotel_id,
+  organizationId,
   fromUnit_id,
   toUnit_id,
   quantity
@@ -124,7 +124,7 @@ export const convert = async (
 
   if (fromUnit_id.toString() === toUnit_id.toString()) {
 
-    const unit = await Unit.findOne({ _id: fromUnit_id, hotel_id });
+    const unit = await Unit.findOne({ _id: fromUnit_id, organizationId });
 
     return {
       result: round(quantity, unit?.decimalPrecision || 2),
@@ -134,13 +134,13 @@ export const convert = async (
   }
 
   const { baseQuantity, baseUnit } = await convertToBase(
-    hotel_id,
+    organizationId,
     fromUnit_id,
     quantity
   );
 
   const { convertedQuantity } = await convertFromBase(
-    hotel_id,
+    organizationId,
     toUnit_id,
     baseQuantity
   );
@@ -158,14 +158,14 @@ export const convert = async (
  * Validate stock availability
  */
 export const validateStock = async (
-  hotel_id,
+  organizationId,
   fromUnit_id,
   saleQuantity,
   availableBaseStock
 ) => {
 
   const { baseQuantity } = await convertToBase(
-    hotel_id,
+    organizationId,
     fromUnit_id,
     saleQuantity
   );

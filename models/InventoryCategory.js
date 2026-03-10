@@ -1,7 +1,7 @@
 /**
  * @model InventoryCategory
  * @description Master category for grouping inventory items (e.g., Food, Beverage, Housekeeping).
- *              Soft-deleted via isActive. Scoped per hotel.
+ *              Soft-deleted via isActive. Scoped per Organization.
  */
 
 import mongoose from "mongoose";
@@ -47,7 +47,7 @@ const inventoryCategorySchema = new mongoose.Schema(
   }
 );
 
-// ── Unique category name per hotel ─────────────────────────
+// ── Unique category name per Organization ─────────────────────────
 
 inventoryCategorySchema.index(
   { organizationId: 1, name: 1 },

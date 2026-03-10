@@ -40,7 +40,7 @@ export const createDepartmentUser = async (organizationId, payload) => {
 };
 
 /**
- * List all users for a hotel
+ * List all users for a Organization
  */
 export const listUsers = async (organizationId) => {
   return User.find({ organizationId }).select("-passwordHash");

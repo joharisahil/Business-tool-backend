@@ -93,7 +93,7 @@ export const seedAccounts = asyncHandler(async (req, res) => {
   if (existing > 0) {
     return res.status(400).json({
       success: false,
-      message: "Chart of accounts already seeded for this hotel.",
+      message: "Chart of accounts already seeded for this Organization.",
     });
   }
 

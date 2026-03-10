@@ -43,7 +43,26 @@ export const UNIT_TYPES = Object.freeze([
   "CAN",
   "SACHET",
   "PLATE",
+
+  // 🔹 Retail / Hardware / Pharma / Cloth
+  "METER",
+  "FEET",
+  "INCH",
+  "CM",
+  "YARD",
+  "TON",
+  "QUINTAL",
+  "BAG",
+  "ROLL",
+  "PAIR",
+  "SET",
 ]);
+
+export const UNIT_CATEGORY = Object.freeze({
+  MEASUREMENT: "MEASUREMENT",
+  PACKAGING: "PACKAGING",
+  COUNTING: "COUNTING",
+});
 
 // ─────────────────────────────────────────────────────────
 // INVOICE STATES
@@ -142,6 +161,7 @@ export const JOURNAL_REFERENCE_TYPE = Object.freeze({
   OPENING_BALANCE: "OPENING_BALANCE",
   SALES_INVOICE: "SALES_INVOICE",
   SALES_CREDIT_NOTE: "SALES_CREDIT_NOTE",
+  SALES_PAYMENT: "SALES_PAYMENT",
 });
 
 // ─────────────────────────────────────────────────────────
@@ -173,6 +193,7 @@ export const AUDIT_ENTITY_TYPE = Object.freeze({
   USER: "USER",
   SALES_INVOICE: "SALES_INVOICE",
   SALES_CREDIT_NOTE: "SALES_CREDIT_NOTE",
+  CUSTOMER: "CUSTOMER",
 });
 
 export const AUDIT_ACTION = Object.freeze({
@@ -217,4 +238,56 @@ export const DEFAULT_LEDGER_CODES = Object.freeze({
   GST_OUTPUT_IGST: "2130",
 
   COGS_EXPENSE: "5100",
+});
+
+
+export const CUSTOMER_TYPE = Object.freeze({
+  RETAIL: "RETAIL",
+  WHOLESALE: "WHOLESALE",
+  DISTRIBUTOR: "DISTRIBUTOR",
+  CORPORATE: "CORPORATE",
+  ONLINE: "ONLINE",
+});
+
+export const SALES_CATEGORY = Object.freeze({
+  GOODS: "GOODS",
+  SERVICES: "SERVICES",
+  OTHER: "OTHER",
+});
+
+export const SALES_PAYMENT_STATUS = Object.freeze({
+  UNPAID: "UNPAID",
+  PARTIAL: "PARTIAL",
+  PAID: "PAID",
+  ADVANCE: "ADVANCE",
+});
+
+export const SALES_CHANNEL = Object.freeze({
+  POS: "POS",
+  ONLINE: "ONLINE",
+  PHONE_ORDER: "PHONE_ORDER",
+  WALK_IN: "WALK_IN",
+});
+
+// ─────────────────────────────────────────────────────────
+// SALES INVOICE STATES
+// ─────────────────────────────────────────────────────────
+export const SALES_INVOICE_STATE = Object.freeze({
+  DRAFT: "DRAFT",
+  APPROVED: "APPROVED",
+  POSTED: "POSTED",
+  CANCELLED: "CANCELLED",
+});
+
+export const SALES_INVOICE_TRANSITIONS = Object.freeze({
+  [SALES_INVOICE_STATE.DRAFT]: [
+    SALES_INVOICE_STATE.APPROVED,
+    SALES_INVOICE_STATE.CANCELLED,
+  ],
+  [SALES_INVOICE_STATE.APPROVED]: [
+    SALES_INVOICE_STATE.POSTED,
+    SALES_INVOICE_STATE.CANCELLED,
+  ],
+  [SALES_INVOICE_STATE.POSTED]: [],
+  [SALES_INVOICE_STATE.CANCELLED]: [],
 });

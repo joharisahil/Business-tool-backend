@@ -72,13 +72,28 @@ export const getSalesInvoice = asyncHandler(async (req, res) => {
   res.json({ success: true, data: invoice });
 });
 export const createSalesInvoice = asyncHandler(async (req, res) => {
-  const { customerName, customerGSTIN, items, notes , paymentMode} = req.body;
+  const {
+    customer_id,
+    customerName,
+    customerGSTIN,
+    items,
+    notes,
+    paymentMode,
+  } = req.body;
 
-  if (!items || items.length === 0)
+  if (!customer_id) {
+    return res.status(400).json({
+      success: false,
+      message: "Customer is required.",
+    });
+  }
+
+  if (!items || items.length === 0) {
     return res.status(400).json({
       success: false,
       message: "Sales invoice must contain items.",
     });
+  }
 
   const enrichedItems = [];
 
@@ -88,41 +103,100 @@ export const createSalesInvoice = asyncHandler(async (req, res) => {
       organizationId: req.user.organizationId,
     });
 
-    if (!inventoryItem)
+    if (!inventoryItem) {
       return res.status(400).json({
         success: false,
         message: "Invalid inventory item.",
       });
+    }
+
+    const quantity = Number(item.quantity);
+    const unitPrice = Number(item.unitPrice);
+    const discount = Number(item.discount || 0);
+    const gstPercentage = Number(item.gstPercentage || 0);
+
+    const lineSubtotal = quantity * unitPrice;
+    const taxableAmount = lineSubtotal - discount;
+
+    const cgstAmount = (taxableAmount * gstPercentage) / 200;
+    const sgstAmount = (taxableAmount * gstPercentage) / 200;
+    const igstAmount = 0;
+
+    const totalAmount =
+      taxableAmount + cgstAmount + sgstAmount + igstAmount;
 
     enrichedItems.push({
       item_id: inventoryItem._id,
       itemName: inventoryItem.name,
       itemSku: inventoryItem.sku,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-      gstPercentage: item.gstPercentage,
+
+      description: item.description || inventoryItem.name,
+      category: item.category || "GOODS",
+
+      quantity,
+      unitPrice,
+      discount,
+
+      taxableAmount,
+      gstPercentage,
+
+      cgstAmount,
+      sgstAmount,
+      igstAmount,
+
+      totalAmount,
+
+      deductStock: item.deductStock ?? true,
     });
   }
 
-  const calc = taxService.calculateInvoiceTotals(enrichedItems);
+  // Calculate totals
+  let subtotal = 0;
+  let totalDiscount = 0;
+  let totalTax = 0;
 
-  const invoiceNumber = await generateInvoiceNumber(req.user.organizationId);
+  enrichedItems.forEach((item) => {
+    subtotal += item.taxableAmount;
+    totalDiscount += item.discount || 0;
+    totalTax += item.cgstAmount + item.sgstAmount + item.igstAmount;
+  });
+
+  const grandTotal = subtotal + totalTax;
+
+  const invoiceNumber = await generateInvoiceNumber(
+    req.user.organizationId
+  );
 
   const invoice = await SalesInvoice.create({
     organizationId: req.user.organizationId,
     invoiceNumber,
+
+    customer_id,
     customerName,
     customerGSTIN,
-    items: calc.items,
-    subtotal: calc.subtotal,
-    gstAmount: calc.gstAmount,
-    taxBreakdown: calc.taxBreakdown,
-    grandTotal: calc.grandTotal,
+
+    items: enrichedItems,
+
+    subtotal,
+    totalDiscount,
+
+    taxBreakdown: {
+      cgst: totalTax / 2,
+      sgst: totalTax / 2,
+      igst: 0,
+      totalTax,
+    },
+
+    grandTotal,
+    outstandingAmount: grandTotal,
+
     paymentMode,
-    outstandingAmount: calc.grandTotal,
     paymentStatus: PAYMENT_STATUS.UNPAID,
-    createdBy: req.user._id,
+
     notes,
+
+    createdBy: req.user._id,
+
     stateLog: [
       {
         to: INVOICE_STATE.DRAFT,
@@ -132,7 +206,10 @@ export const createSalesInvoice = asyncHandler(async (req, res) => {
     ],
   });
 
-  res.status(201).json({ success: true, data: invoice });
+  res.status(201).json({
+    success: true,
+    data: invoice,
+  });
 });
 export const approveSalesInvoice = asyncHandler(async (req, res) => {
   const invoice = await SalesInvoice.findOne({
@@ -168,7 +245,7 @@ export const approveSalesInvoice = asyncHandler(async (req, res) => {
 
   res.json({ success: true, data: invoice });
 });
-export const postSalesInvoiceController = asyncHandler(async (req, res) => {
+export const postSalesInvoice = asyncHandler(async (req, res) => {
   const invoice = await salesPostingService.postSalesInvoice({
     organizationId: req.user.organizationId,
     invoiceId: req.params.id,
@@ -338,6 +415,31 @@ export const updateSalesInvoice = asyncHandler(async (req, res) => {
     data: invoice,
   });
 });
+
+export const getCustomerOutstanding = asyncHandler(async (req, res) => {
+  const { customerId } = req.params;
+
+  const invoices = await SalesInvoice.find({
+    organizationId: req.user.organizationId,
+    customer_id: customerId,
+    invoiceState: INVOICE_STATE.POSTED,
+    outstandingAmount: { $gt: 0 },
+  }).sort({ createdAt: -1 });
+
+  const totalOutstanding = invoices.reduce(
+    (sum, invoice) => sum + invoice.outstandingAmount,
+    0
+  );
+
+  res.json({
+    success: true,
+    data: {
+      customerId,
+      totalOutstanding,
+      invoices,
+    },
+  });
+});
 // /**
 //  * @controller salesInvoiceController.js
 //  * @description Sales invoice CRUD, state transitions, and listing.
@@ -359,11 +461,11 @@ export const updateSalesInvoice = asyncHandler(async (req, res) => {
 // } = require('../constants/enums');
 
 // // ── Sequential invoice number generator ──────────────────────────
-// async function generateSalesInvoiceNumber(hotel_id) {
+// async function generateSalesInvoiceNumber(organizationId) {
 //   const year   = new Date().getFullYear();
-//   const prefix = `HOTEL-SAL-${year}-`;
+//   const prefix = `Organization-SAL-${year}-`;
 //   const last   = await SalesInvoice
-//     .findOne({ hotel_id, invoiceNumber: { $regex: `^${prefix}` } })
+//     .findOne({ organizationId, invoiceNumber: { $regex: `^${prefix}` } })
 //     .sort({ invoiceNumber: -1 })
 //     .select('invoiceNumber');
 //   let seq = 1;
@@ -382,7 +484,7 @@ export const updateSalesInvoice = asyncHandler(async (req, res) => {
 // exports.listInvoices = async (req, res) => {
 //   try {
 //     const { state, customer_id, paymentStatus, fromDate, toDate, page = 1, limit = 50 } = req.query;
-//     const filter = { hotel_id: req.user.hotel_id };
+//     const filter = { organizationId: req.user.organizationId };
 //     if (state)         filter.invoiceState = state;
 //     if (customer_id)   filter.customer_id = customer_id;
 //     if (paymentStatus) filter.paymentStatus = paymentStatus;
@@ -411,7 +513,7 @@ export const updateSalesInvoice = asyncHandler(async (req, res) => {
 // exports.getInvoice = async (req, res) => {
 //   try {
 //     const invoice = await SalesInvoice
-//       .findOne({ _id: req.params.id, hotel_id: req.user.hotel_id })
+//       .findOne({ _id: req.params.id, organizationId: req.user.organizationId })
 //       .populate('customer_id', 'name email phone gstin customerType');
 //     if (!invoice) return res.status(404).json({ success: false, message: 'Sales invoice not found.' });
 //     res.json({ success: true, data: invoice });
@@ -423,9 +525,9 @@ export const updateSalesInvoice = asyncHandler(async (req, res) => {
 // exports.createInvoice = async (req, res) => {
 //   try {
 //     const { customer_id, items, roomNumber, bookingRef, notes, paymentTerms } = req.body;
-//     const hotel_id = req.user.hotel_id;
+//     const organizationId = req.user.organizationId;
 
-//     const customer = await Customer.findOne({ _id: customer_id, hotel_id });
+//     const customer = await Customer.findOne({ _id: customer_id, organizationId });
 //     if (!customer) return res.status(404).json({ success: false, message: 'Customer not found.' });
 
 //     // Recalculate totals server-side
@@ -461,10 +563,10 @@ export const updateSalesInvoice = asyncHandler(async (req, res) => {
 //     });
 
 //     const grandTotal = parseFloat((subtotal + taxBreakdown.totalTax).toFixed(2));
-//     const invoiceNumber = await generateSalesInvoiceNumber(hotel_id);
+//     const invoiceNumber = await generateSalesInvoiceNumber(organizationId);
 
 //     const invoice = await SalesInvoice.create({
-//       hotel_id,
+//       organizationId,
 //       invoiceNumber,
 //       customer_id,
 //       customerName:  customer.name,
@@ -485,7 +587,7 @@ export const updateSalesInvoice = asyncHandler(async (req, res) => {
 //     });
 
 //     await auditService.log({
-//       hotel_id,
+//       organizationId,
 //       entityType:      AUDIT_ENTITY_TYPE.SALES_INVOICE,
 //       entity_id:       invoice._id,
 //       entityReference: invoiceNumber,
@@ -504,7 +606,7 @@ export const updateSalesInvoice = asyncHandler(async (req, res) => {
 
 // exports.updateInvoice = async (req, res) => {
 //   try {
-//     const invoice = await SalesInvoice.findOne({ _id: req.params.id, hotel_id: req.user.hotel_id });
+//     const invoice = await SalesInvoice.findOne({ _id: req.params.id, organizationId: req.user.organizationId });
 //     if (!invoice) return res.status(404).json({ success: false, message: 'Sales invoice not found.' });
 //     if (invoice.invoiceState !== SALES_INVOICE_STATE.DRAFT) {
 //       return res.status(400).json({ success: false, message: 'Only DRAFT invoices can be edited.' });
@@ -525,7 +627,7 @@ export const updateSalesInvoice = asyncHandler(async (req, res) => {
 
 // exports.approveInvoice = async (req, res) => {
 //   try {
-//     const invoice = await SalesInvoice.findOne({ _id: req.params.id, hotel_id: req.user.hotel_id });
+//     const invoice = await SalesInvoice.findOne({ _id: req.params.id, organizationId: req.user.organizationId });
 //     if (!invoice) return res.status(404).json({ success: false, message: 'Sales invoice not found.' });
 
 //     const allowed = SALES_INVOICE_TRANSITIONS[invoice.invoiceState];
@@ -550,7 +652,7 @@ export const updateSalesInvoice = asyncHandler(async (req, res) => {
 // exports.postInvoice = async (req, res) => {
 //   try {
 //     const result = await salesPostingService.postSalesInvoice({
-//       hotel_id:  req.user.hotel_id,
+//       organizationId:  req.user.organizationId,
 //       invoiceId: req.params.id,
 //       user:      req.user,
 //       ipAddress: req.ip,
@@ -563,7 +665,7 @@ export const updateSalesInvoice = asyncHandler(async (req, res) => {
 
 // exports.cancelInvoice = async (req, res) => {
 //   try {
-//     const invoice = await SalesInvoice.findOne({ _id: req.params.id, hotel_id: req.user.hotel_id });
+//     const invoice = await SalesInvoice.findOne({ _id: req.params.id, organizationId: req.user.organizationId });
 //     if (!invoice) return res.status(404).json({ success: false, message: 'Sales invoice not found.' });
 
 //     const allowed = SALES_INVOICE_TRANSITIONS[invoice.invoiceState];

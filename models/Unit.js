@@ -11,9 +11,9 @@ import { UNIT_CATEGORY } from "../constants/enums.js";
 
 const unitSchema = new mongoose.Schema(
   {
-    hotel_id: {
+    organizationId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Hotel",
+      ref: "Organization",
       required: true,
       index: true,
     },
@@ -88,9 +88,9 @@ const unitSchema = new mongoose.Schema(
 
 // ── Indexes ─────────────────────────────────────────────
 
-unitSchema.index({ hotel_id: 1, shortCode: 1 }, { unique: true });
-unitSchema.index({ hotel_id: 1, category: 1, isActive: 1 });
-unitSchema.index({ hotel_id: 1, baseUnit_id: 1 });
+unitSchema.index({ organizationId: 1, shortCode: 1 }, { unique: true });
+unitSchema.index({ organizationId: 1, category: 1, isActive: 1 });
+unitSchema.index({ organizationId: 1, baseUnit_id: 1 });
 
 
 const Unit = mongoose.model("Unit", unitSchema);

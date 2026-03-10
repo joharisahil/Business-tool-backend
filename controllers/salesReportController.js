@@ -12,7 +12,7 @@ import * as salesReportService from "../services/salesReportService.js";
 export const getSalesSummary = asyncHandler(async (req, res) => {
 
   const result = await salesReportService.getSalesSummary(
-    req.user.hotel_id,
+    req.user.organizationId,
     req.query
   );
 
@@ -29,7 +29,7 @@ export const getSalesSummary = asyncHandler(async (req, res) => {
 export const getGSTReport = asyncHandler(async (req, res) => {
 
   const result = await salesReportService.getGSTReport(
-    req.user.hotel_id,
+    req.user.organizationId,
     req.query
   );
 
@@ -46,7 +46,7 @@ export const getGSTReport = asyncHandler(async (req, res) => {
 export const getReceivableAging = asyncHandler(async (req, res) => {
 
   const result = await salesReportService.getReceivableAging(
-    req.user.hotel_id
+    req.user.organizationId
   );
 
   res.json({
@@ -62,7 +62,7 @@ export const getReceivableAging = asyncHandler(async (req, res) => {
 export const getCustomerLedger = asyncHandler(async (req, res) => {
 
   const result = await salesReportService.getCustomerLedger(
-    req.user.hotel_id,
+    req.user.organizationId,
     req.params.customerId,
     req.query
   );
@@ -80,7 +80,7 @@ export const getCustomerLedger = asyncHandler(async (req, res) => {
 export const getDailyCollection = asyncHandler(async (req, res) => {
 
   const result = await salesReportService.getDailyCollection(
-    req.user.hotel_id,
+    req.user.organizationId,
     req.query
   );
 

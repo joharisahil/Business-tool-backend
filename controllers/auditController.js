@@ -18,7 +18,7 @@ export const getAuditLogs = asyncHandler(async (req, res) => {
     limit = 50,
   } = req.query;
 
-  // Always scoped to logged-in user's hotel
+  // Always scoped to logged-in user's Organization
   const organizationId = req.user.organizationId;
 
   const result = await auditService.getAuditLogs({

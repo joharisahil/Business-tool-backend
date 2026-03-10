@@ -18,7 +18,7 @@ export const listUnits = asyncHandler(async (req, res) => {
 
   const { category, active, search, page = 1, limit = 100 } = req.query;
 
-  const filter = { hotel_id: req.user.hotel_id };
+  const filter = { organizationId: req.user.organizationId };
 
   if (category) filter.category = category;
   if (active !== undefined) filter.isActive = active === "true";
@@ -60,7 +60,7 @@ export const getUnit = asyncHandler(async (req, res) => {
   const unit = await Unit
     .findOne({
       _id: req.params.id,
-      hotel_id: req.user.hotel_id,
+      organizationId: req.user.organizationId,
     })
     .populate("baseUnit_id", "name shortCode");
 
@@ -85,12 +85,12 @@ export const createUnit = asyncHandler(async (req, res) => {
 
   const unit = await Unit.create({
     ...req.body,
-    hotel_id: req.user.hotel_id,
+    organizationId: req.user.organizationId,
     createdBy: req.user._id,
   });
 
   await auditService.log({
-    hotel_id: req.user.hotel_id,
+    organizationId: req.user.organizationId,
     entityType: AUDIT_ENTITY_TYPE.UNIT,
     entity_id: unit._id,
     entityReference: unit.shortCode,
@@ -115,7 +115,7 @@ export const updateUnit = asyncHandler(async (req, res) => {
 
   const unit = await Unit.findOne({
     _id: req.params.id,
-    hotel_id: req.user.hotel_id,
+    organizationId: req.user.organizationId,
   });
 
   if (!unit) {
@@ -156,7 +156,7 @@ export const toggleUnit = asyncHandler(async (req, res) => {
 
   const unit = await Unit.findOne({
     _id: req.params.id,
-    hotel_id: req.user.hotel_id,
+    organizationId: req.user.organizationId,
   });
 
   if (!unit) {
@@ -192,7 +192,7 @@ export const previewConversion = asyncHandler(async (req, res) => {
   }
 
   const result = await conversionService.convert(
-    req.user.hotel_id,
+    req.user.organizationId,
     fromUnit_id,
     toUnit_id,
     parseFloat(quantity)
@@ -212,7 +212,7 @@ export const getRelatedUnits = asyncHandler(async (req, res) => {
 
   const unit = await Unit.findOne({
     _id: req.params.id,
-    hotel_id: req.user.hotel_id,
+    organizationId: req.user.organizationId,
   });
 
   if (!unit) {
@@ -237,7 +237,7 @@ export const getRelatedUnits = asyncHandler(async (req, res) => {
   }
 
   const related = await Unit.find({
-    hotel_id: req.user.hotel_id,
+    organizationId: req.user.organizationId,
     isActive: true,
     $or: [
       { _id: baseId },

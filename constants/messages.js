@@ -85,6 +85,6 @@ export const MSG = Object.freeze({
   // ── Auth ─────────────────────────────────────────────────────
   ROLE_INSUFFICIENT: (required) =>
     `This action requires '${required}' role or higher.`,
-  HOTEL_MISMATCH:
-    "You can only access resources belonging to your hotel.",
+  Organization_MISMATCH:
+    "You can only access resources belonging to your Organization.",
 });

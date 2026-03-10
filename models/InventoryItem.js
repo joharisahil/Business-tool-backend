@@ -10,10 +10,10 @@ import { UNIT_TYPES } from "../constants/enums.js";
 
 const inventoryItemSchema = new mongoose.Schema(
   {
-    hotel_id: {
+    organizationId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Hotel",
-      required: [true, "hotel_id is required"],
+      ref: "Organization",
+      required: [true, "organizationId is required"],
       index: true,
     },
 
@@ -122,11 +122,11 @@ const inventoryItemSchema = new mongoose.Schema(
 
 // ── Indexes ─────────────────────────────────────────────
 
-inventoryItemSchema.index({ hotel_id: 1, sku: 1 }, { unique: true });
+inventoryItemSchema.index({ organizationId: 1, sku: 1 }, { unique: true });
 
-inventoryItemSchema.index({ hotel_id: 1, name: "text" });
+inventoryItemSchema.index({ organizationId: 1, name: "text" });
 
-inventoryItemSchema.index({ hotel_id: 1, category_id: 1, isActive: 1 });
+inventoryItemSchema.index({ organizationId: 1, category_id: 1, isActive: 1 });
 
 
 // ── Pre-save validation ─────────────────────────────────
@@ -135,7 +135,7 @@ inventoryItemSchema.pre("save", function (next) {
   if (this.isPerishable && !this.shelfLifeDays) {
     return next(new Error("shelfLifeDays is required for perishable items."));
   }
-  next();
+  
 });
 
 

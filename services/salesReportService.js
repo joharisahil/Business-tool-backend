@@ -14,10 +14,10 @@ import { SALES_INVOICE_STATE } from "../constants/enums.js";
 /**
  * Sales Summary — total sales by category and date range.
  */
-export const getSalesSummary = async (hotel_id, { fromDate, toDate } = {}) => {
+export const getSalesSummary = async (organizationId, { fromDate, toDate } = {}) => {
 
   const match = {
-    hotel_id: new mongoose.Types.ObjectId(hotel_id),
+    organizationId: new mongoose.Types.ObjectId(organizationId),
     invoiceState: SALES_INVOICE_STATE.POSTED,
   };
 
@@ -85,10 +85,10 @@ export const getSalesSummary = async (hotel_id, { fromDate, toDate } = {}) => {
 /**
  * GST Report — output tax collected breakdown.
  */
-export const getGSTReport = async (hotel_id, { fromDate, toDate } = {}) => {
+export const getGSTReport = async (organizationId, { fromDate, toDate } = {}) => {
 
   const match = {
-    hotel_id: new mongoose.Types.ObjectId(hotel_id),
+    organizationId: new mongoose.Types.ObjectId(organizationId),
     invoiceState: SALES_INVOICE_STATE.POSTED,
   };
 
@@ -129,12 +129,12 @@ export const getGSTReport = async (hotel_id, { fromDate, toDate } = {}) => {
 /**
  * Receivable Aging
  */
-export const getReceivableAging = async (hotel_id) => {
+export const getReceivableAging = async (organizationId) => {
 
   const now = new Date();
 
   const invoices = await SalesInvoice.find({
-    hotel_id,
+    organizationId,
     invoiceState: SALES_INVOICE_STATE.POSTED,
     outstandingAmount: { $gt: 0 },
   })
@@ -194,13 +194,13 @@ export const getReceivableAging = async (hotel_id) => {
  * Customer Ledger
  */
 export const getCustomerLedger = async (
-  hotel_id,
+  organizationId,
   customer_id,
   { fromDate, toDate } = {}
 ) => {
 
   const invoiceMatch = {
-    hotel_id: new mongoose.Types.ObjectId(hotel_id),
+    organizationId: new mongoose.Types.ObjectId(organizationId),
     customer_id: new mongoose.Types.ObjectId(customer_id),
   };
 
@@ -219,7 +219,7 @@ export const getCustomerLedger = async (
       .lean(),
 
     SalesPayment.find({
-      hotel_id: new mongoose.Types.ObjectId(hotel_id),
+      organizationId: new mongoose.Types.ObjectId(organizationId),
       customer_id: new mongoose.Types.ObjectId(customer_id),
     })
       .select(
@@ -236,7 +236,7 @@ export const getCustomerLedger = async (
 /**
  * Daily Collection Report
  */
-export const getDailyCollection = async (hotel_id, { date } = {}) => {
+export const getDailyCollection = async (organizationId, { date } = {}) => {
 
   const targetDate = date ? new Date(date) : new Date();
 
@@ -244,7 +244,7 @@ export const getDailyCollection = async (hotel_id, { date } = {}) => {
   const endOfDay = new Date(targetDate.setHours(23, 59, 59, 999));
 
   const payments = await SalesPayment.find({
-    hotel_id: new mongoose.Types.ObjectId(hotel_id),
+    organizationId: new mongoose.Types.ObjectId(organizationId),
     receivedAt: { $gte: startOfDay, $lte: endOfDay },
   })
     .populate("customer_id", "name")

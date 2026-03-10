@@ -28,12 +28,12 @@ import {
 
 // ── Generate Credit Note Number ───────────────────────────
 
-async function generateSCNNumber(hotel_id) {
+async function generateSCNNumber(organizationId) {
   const year = new Date().getFullYear();
   const prefix = `SCN-${year}-`;
 
   const last = await SalesCreditNote
-    .findOne({ hotel_id, creditNoteNumber: { $regex: `^${prefix}` } })
+    .findOne({ organizationId, creditNoteNumber: { $regex: `^${prefix}` } })
     .sort({ creditNoteNumber: -1 })
     .select("creditNoteNumber");
 
@@ -58,10 +58,10 @@ export const createSalesCreditNote = asyncHandler(async (req, res) => {
   try {
 
     const { invoice_id, items, reason } = req.body;
-    const hotel_id = req.user.hotel_id;
+    const organizationId = req.user.organizationId;
 
     const invoice = await SalesInvoice
-      .findOne({ _id: invoice_id, hotel_id })
+      .findOne({ _id: invoice_id, organizationId })
       .session(session);
 
     if (!invoice) {
@@ -115,7 +115,7 @@ export const createSalesCreditNote = asyncHandler(async (req, res) => {
       (subtotal + taxBreakdown.totalTax).toFixed(2)
     );
 
-    const creditNoteNumber = await generateSCNNumber(hotel_id);
+    const creditNoteNumber = await generateSCNNumber(organizationId);
 
 
     // ── Journal Entry ─────────────────────────────
@@ -158,7 +158,7 @@ export const createSalesCreditNote = asyncHandler(async (req, res) => {
 
 
     const journalEntry = await journalService.createEntry({
-      hotel_id,
+      organizationId,
       referenceType: JOURNAL_REFERENCE_TYPE.SALES_CREDIT_NOTE,
       reference_id: invoice._id,
       referenceNumber: creditNoteNumber,
@@ -176,7 +176,7 @@ export const createSalesCreditNote = asyncHandler(async (req, res) => {
       if (item.restoreStock && item.item_id) {
 
         await stockService.stockIn({
-          hotel_id,
+          organizationId,
           item_id: item.item_id,
           quantity: item.quantity,
           referenceType: REFERENCE_TYPE.CREDIT_NOTE,
@@ -193,7 +193,7 @@ export const createSalesCreditNote = asyncHandler(async (req, res) => {
     // ── Create Credit Note ───────────────────────
 
     const creditNote = await SalesCreditNote.create([{
-      hotel_id,
+      organizationId,
       creditNoteNumber,
       originalInvoice_id: invoice._id,
       originalInvoiceNumber: invoice.invoiceNumber,
@@ -210,7 +210,7 @@ export const createSalesCreditNote = asyncHandler(async (req, res) => {
 
 
     await auditService.log({
-      hotel_id,
+      organizationId,
       entityType: AUDIT_ENTITY_TYPE.SALES_CREDIT_NOTE,
       entity_id: creditNote[0]._id,
       entityReference: creditNoteNumber,
@@ -250,7 +250,7 @@ export const listSalesCreditNotes = asyncHandler(async (req, res) => {
 
   const { customer_id, fromDate, toDate, page = 1, limit = 50 } = req.query;
 
-  const filter = { hotel_id: req.user.hotel_id };
+  const filter = { organizationId: req.user.organizationId };
 
   if (customer_id) filter.customer_id = customer_id;
 

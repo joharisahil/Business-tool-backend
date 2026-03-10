@@ -34,7 +34,7 @@ export const registerUser = async ({
     phone,
     gstNumber,
   });
-  await seedLedgerAccountsForHotel(organization._id, user._id);
+  await seedLedgerAccountsForOrganization(organization._id, user._id);
 
   // 5️⃣ Generate token
   const token = jwt.sign(

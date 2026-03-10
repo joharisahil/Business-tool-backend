@@ -1,7 +1,7 @@
 /**
  * @model Customer
  * @description Tracks guests, corporate clients, travel agents, and walk-in customers.
- *              Designed for hotel PMS but extensible to generic ERP customers.
+ *              Designed for Organization PMS but extensible to generic ERP customers.
  *              Outstanding balance is derived from SalesInvoice aggregation, never stored.
  */
 
@@ -10,9 +10,9 @@ import { CUSTOMER_TYPE, PAYMENT_TERMS } from "../constants/enums.js";
 
 const customerSchema = new mongoose.Schema(
   {
-    hotel_id: {
+    organizationId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Hotel",
+      ref: "Organization",
       required: true,
       index: true,
     },
@@ -112,10 +112,10 @@ const customerSchema = new mongoose.Schema(
 
 // ── Indexes ─────────────────────────────────────────────────────
 
-customerSchema.index({ hotel_id: 1, name: "text", companyName: "text" });
-customerSchema.index({ hotel_id: 1, customerType: 1, isActive: 1 });
-customerSchema.index({ hotel_id: 1, gstin: 1 });
-customerSchema.index({ hotel_id: 1, phone: 1 });
+customerSchema.index({ organizationId: 1, name: "text", companyName: "text" });
+customerSchema.index({ organizationId: 1, customerType: 1, isActive: 1 });
+customerSchema.index({ organizationId: 1, gstin: 1 });
+customerSchema.index({ organizationId: 1, phone: 1 });
 
 const Customer = mongoose.model("Customer", customerSchema);
 

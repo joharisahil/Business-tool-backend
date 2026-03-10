@@ -4,7 +4,7 @@
  *
  * RULES:
  *  1. Every entry must balance: totalDebit === totalCredit (±₹0.005 tolerance)
- *  2. Entry numbers are sequential and unique per hotel: JE-{YYYY}-{NNNNNN}
+ *  2. Entry numbers are sequential and unique per Organization: JE-{YYYY}-{NNNNNN}
  *  3. Entries are immutable — corrections via reversal only
  *  4. Reversal swaps DEBIT↔CREDIT on all lines and marks original as reversed
  *  5. Ledger balances are NEVER stored — always derived via aggregation
@@ -51,7 +51,7 @@ export async function resolveAccount(organizationId, code, session) {
 
   if (!account) {
     throw new Error(
-      `Ledger account '${code}' not found or inactive for this hotel.`
+      `Ledger account '${code}' not found or inactive for this Organization.`
     );
   }
 

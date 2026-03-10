@@ -13,7 +13,7 @@ import { AUDIT_ENTITY_TYPE, AUDIT_ACTION } from "../constants/enums.js";
 export const listCustomers = asyncHandler(async (req, res) => {
   const { type, active, search, page = 1, limit = 50 } = req.query;
 
-  const filter = { hotel_id: req.user.hotel_id };
+  const filter = { organizationId: req.user.organizationId };
 
   if (type) filter.customerType = type;
   if (active !== undefined) filter.isActive = active === "true";
@@ -51,7 +51,7 @@ export const listCustomers = asyncHandler(async (req, res) => {
 export const getCustomer = asyncHandler(async (req, res) => {
   const customer = await Customer.findOne({
     _id: req.params.id,
-    hotel_id: req.user.hotel_id,
+    organizationId: req.user.organizationId,
   });
 
   if (!customer) {
@@ -68,12 +68,12 @@ export const getCustomer = asyncHandler(async (req, res) => {
 export const createCustomer = asyncHandler(async (req, res) => {
   const customer = await Customer.create({
     ...req.body,
-    hotel_id: req.user.hotel_id,
+    organizationId: req.user.organizationId,
     createdBy: req.user._id,
   });
 
   await auditService.log({
-    hotel_id: req.user.hotel_id,
+    organizationId: req.user.organizationId,
     entityType: AUDIT_ENTITY_TYPE.CUSTOMER,
     entity_id: customer._id,
     entityReference: customer.name,
@@ -92,7 +92,7 @@ export const createCustomer = asyncHandler(async (req, res) => {
 export const updateCustomer = asyncHandler(async (req, res) => {
   const before = await Customer.findOne({
     _id: req.params.id,
-    hotel_id: req.user.hotel_id,
+    organizationId: req.user.organizationId,
   });
 
   if (!before) {
@@ -112,7 +112,7 @@ export const updateCustomer = asyncHandler(async (req, res) => {
 export const toggleCustomer = asyncHandler(async (req, res) => {
   const customer = await Customer.findOne({
     _id: req.params.id,
-    hotel_id: req.user.hotel_id,
+    organizationId: req.user.organizationId,
   });
 
   if (!customer) {

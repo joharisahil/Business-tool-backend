@@ -268,7 +268,7 @@ export async function getVendorLedger(
   };
 }
 
-export const seedLedgerAccountsForHotel = async (organizationId, userId) => {
+export const seedLedgerAccountsForOrganization = async (organizationId, userId) => {
   for (const seed of LEDGER_SEEDS) {
     const exists = await LedgerAccount.findOne({
       organizationId,

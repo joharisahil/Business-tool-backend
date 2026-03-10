@@ -11,9 +11,9 @@ import { PAYMENT_METHOD } from "../constants/enums.js";
 
 const salesPaymentSchema = new mongoose.Schema(
   {
-    hotel_id: {
+    organizationId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Hotel",
+      ref: "Organization",
       required: true,
       index: true,
     },
@@ -97,9 +97,9 @@ const salesPaymentSchema = new mongoose.Schema(
 
 // ── Indexes ─────────────────────────────────────────────
 
-salesPaymentSchema.index({ hotel_id: 1, invoice_id: 1, createdAt: -1 });
-salesPaymentSchema.index({ hotel_id: 1, customer_id: 1, createdAt: -1 });
-salesPaymentSchema.index({ hotel_id: 1, receivedAt: -1 });
+salesPaymentSchema.index({ organizationId: 1, invoice_id: 1, createdAt: -1 });
+salesPaymentSchema.index({ organizationId: 1, customer_id: 1, createdAt: -1 });
+salesPaymentSchema.index({ organizationId: 1, receivedAt: -1 });
 
 
 // ── Guard: immutable records ─────────────────────────────

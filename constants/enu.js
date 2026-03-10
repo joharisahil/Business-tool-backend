@@ -8,8 +8,8 @@
 // ROLES
 // ─────────────────────────────────────────────────────────
 const ROLES = Object.freeze({
-  MD:         'MD',         // Managing Director – highest authority, cross-hotel access
-  GM:         'GM',         // General Manager  – hotel-level operational & financial control
+  MD:         'MD',         // Managing Director – highest authority, cross-Organization access
+  GM:         'GM',         // General Manager  – Organization-level operational & financial control
   ACCOUNTANT: 'ACCOUNTANT', // Manage invoices & payments
   FRONT_DESK: 'FRONT_DESK', // Draft-only access
 });

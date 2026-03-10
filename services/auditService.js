@@ -53,7 +53,7 @@ export async function log({
 }
 
 /**
- * Retrieves paginated audit logs for a hotel with optional filters.
+ * Retrieves paginated audit logs for a Organization with optional filters.
  */
 export async function getAuditLogs({
   organizationId,

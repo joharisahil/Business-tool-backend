@@ -16,7 +16,7 @@ router.use(protect);
 router.use(authorize("GM", "MD"));
 
 router.post("/", createDepartmentUser);     // create department user
-router.get("/", listUsers);                 // list all hotel users
+router.get("/", listUsers);                 // list all Organization users
 router.get("/:id", getUser);                // get single user
 router.put("/:id", updateUser);             // update user name/role
 router.delete("/:id", deleteUser);          // deactivate user

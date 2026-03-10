@@ -3,7 +3,7 @@
  * @description Chart of Accounts entry. Balance is NEVER stored here —
  *              it is always derived by aggregating JournalEntry lines.
  *              Direct balance manipulation is strictly forbidden.
- *              Seeded per hotel using ledgerSeeds.js on initial setup.
+ *              Seeded per Organization using ledgerSeeds.js on initial setup.
  */
 
 import mongoose from 'mongoose';
@@ -72,7 +72,7 @@ const ledgerAccountSchema = new mongoose.Schema(
 
 // ── Indexes ─────────────────────────────────────────────────────
 
-// Account code must be unique per hotel
+// Account code must be unique per Organization
 ledgerAccountSchema.index({ organizationId: 1, code: 1 }, { unique: true });
 ledgerAccountSchema.index({ organizationId: 1, type: 1, isActive: 1 });
 ledgerAccountSchema.index({ organizationId: 1, name: 'text' });

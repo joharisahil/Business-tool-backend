@@ -1,12 +1,12 @@
 /**
  * @file ledgerSeeds.js
- * @description Default Chart of Accounts seeded per hotel on first setup.
+ * @description Default Chart of Accounts seeded per Organization on first setup.
  *              These are the accounts used by invoicePostingService and journalService.
  *              organizationId is injected at seed time.
  */
 /**
  * @file ledgerSeeds.js
- * @description Default Chart of Accounts seeded per hotel on first setup.
+ * @description Default Chart of Accounts seeded per Organization on first setup.
  */
 
 import { LEDGER_ACCOUNT_TYPE } from "./enums.js";

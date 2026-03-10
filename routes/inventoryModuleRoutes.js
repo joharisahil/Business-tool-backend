@@ -25,6 +25,7 @@ import * as customerCtrl from "../controllers/customerController.js";
 import * as salesCreditCtrl from "../controllers/salesCreditNoteController.js";
 import * as salesReportCtrl from "../controllers/salesReportController.js";
 import * as unitCtrl from "../controllers/unitController.js";
+import * as salesPaymentCtrl from "../controllers/salesPaymentController.js";
 
 const router = express.Router();
 
@@ -202,7 +203,7 @@ router.patch(
 router.patch(
   "/sales-invoices/:id/post",
   authorize(...MANAGER_ADMIN),
-  salesCtrl.postSalesInvoiceController
+  salesCtrl.postSalesInvoice
 );
 
 router.patch(
@@ -218,6 +219,11 @@ router.put(
 );
 // ── Sales Payments ─────────────────────────────────────
 
+router.get(
+  "/sales-payments",
+  authorize(...MANAGER_ADMIN),
+  salesPaymentCtrl.listSalesPayments
+);
 router.post(
   "/sales-invoices/:invoiceId/payments",
   authorize(...MANAGER_ADMIN),

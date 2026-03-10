@@ -61,9 +61,9 @@ const creditNoteItemSchema = new mongoose.Schema(
 
 const salesCreditNoteSchema = new mongoose.Schema(
   {
-    hotel_id: {
+    organizationId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Hotel",
+      ref: "Organization",
       required: true,
       index: true,
     },
@@ -151,13 +151,13 @@ const salesCreditNoteSchema = new mongoose.Schema(
 // ── Indexes ─────────────────────────────────────────────
 
 salesCreditNoteSchema.index(
-  { hotel_id: 1, creditNoteNumber: 1 },
+  { organizationId: 1, creditNoteNumber: 1 },
   { unique: true }
 );
 
-salesCreditNoteSchema.index({ hotel_id: 1, originalInvoice_id: 1 });
+salesCreditNoteSchema.index({ organizationId: 1, originalInvoice_id: 1 });
 
-salesCreditNoteSchema.index({ hotel_id: 1, customer_id: 1 });
+salesCreditNoteSchema.index({ organizationId: 1, customer_id: 1 });
 
 
 // ── Guard: immutable ─────────────────────────────────────

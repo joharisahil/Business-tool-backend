@@ -7,12 +7,32 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import * as salesPaymentService from "../services/salesPaymentService.js";
 
 
+import SalesPayment from "../models/SalesPayment.js";
 // ── Record Payment ───────────────────────────────────────
 
-export const recordPayment = asyncHandler(async (req, res) => {
+export const listSalesPayments = asyncHandler(async (req, res) => {
 
+const { organizationId } = req.user;
+
+  const payments = await SalesPayment.find({
+    organizationId: organizationId
+  })
+  .populate("invoiceId", "invoiceNumber")
+  .populate("recordedBy", "name")
+  .sort({ paidAt: -1 })
+.lean();
+
+  res.json({
+    success: true,
+    data: payments
+  });
+
+});
+
+
+export const recordPayment = asyncHandler(async (req, res) => {
   const result = await salesPaymentService.recordSalesPayment({
-    hotel_id: req.user.hotel_id,
+    organizationId: req.user.organizationId,
     invoiceId: req.params.invoiceId,
     amount: req.body.amount,
     method: req.body.method,
@@ -27,39 +47,32 @@ export const recordPayment = asyncHandler(async (req, res) => {
     success: true,
     data: result,
   });
-
 });
-
 
 // ── Payment History ──────────────────────────────────────
 
 export const getPaymentHistory = asyncHandler(async (req, res) => {
-
   const payments = await salesPaymentService.getSalesPaymentHistory(
-    req.user.hotel_id,
-    req.params.invoiceId
+    req.user.organizationId,
+    req.params.invoiceId,
   );
 
   res.json({
     success: true,
     data: payments,
   });
-
 });
-
 
 // ── Customer Outstanding ─────────────────────────────────
 
 export const getCustomerOutstanding = asyncHandler(async (req, res) => {
-
   const result = await salesPaymentService.getCustomerOutstanding(
-    req.user.hotel_id,
-    req.params.customerId
+    req.user.organizationId,
+    req.params.customerId,
   );
 
   res.json({
     success: true,
     data: result,
   });
-
 });

@@ -2,7 +2,7 @@
 import { z } from "zod";
 
 /**
- * Allowed roles for hotel system
+ * Allowed roles for Organization system
  * (Same as your RBAC roles)
  */
 export const USER_ROLES = [

@@ -93,9 +93,9 @@ const stateLogSchema = new mongoose.Schema(
 
 const salesInvoiceSchema = new mongoose.Schema(
   {
-    hotel_id: {
+    organizationId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Hotel",
+      ref: "Organization",
       required: true,
       index: true,
     },
@@ -202,6 +202,6 @@ const salesInvoiceSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-salesInvoiceSchema.index({ hotel_id: 1, invoiceNumber: 1 }, { unique: true });
+salesInvoiceSchema.index({ organizationId: 1, invoiceNumber: 1 }, { unique: true });
 
 export default mongoose.model("SalesInvoice", salesInvoiceSchema);

@@ -41,7 +41,7 @@ function getCashOrBankCode(method) {
 
 
 export const recordSalesPayment = async ({
-  hotel_id,
+  organizationId,
   invoiceId,
   amount,
   method,
@@ -61,7 +61,7 @@ export const recordSalesPayment = async ({
   try {
 
     const invoice = await SalesInvoice
-      .findOne({ _id: invoiceId, hotel_id })
+      .findOne({ _id: invoiceId, organizationId })
       .session(session);
 
     if (!invoice) throw new Error("Sales invoice not found.");
@@ -116,7 +116,7 @@ export const recordSalesPayment = async ({
 
 
     const journalEntry = await journalService.createEntry({
-      hotel_id,
+      organizationId,
       referenceType: JOURNAL_REFERENCE_TYPE.SALES_PAYMENT,
       reference_id: invoice._id,
       referenceNumber: invoice.invoiceNumber,
@@ -133,7 +133,7 @@ export const recordSalesPayment = async ({
     const [payment] = await SalesPayment.create(
       [
         {
-          hotel_id,
+          organizationId,
           invoice_id: invoice._id,
           invoiceNumber: invoice.invoiceNumber,
           customer_id: invoice.customer_id,
@@ -195,7 +195,7 @@ export const recordSalesPayment = async ({
 
     // ── Audit Log ─────────────────────────────
     await auditService.log({
-      hotel_id,
+      organizationId,
       entityType: AUDIT_ENTITY_TYPE.SALES_PAYMENT,
       entity_id: payment._id,
       entityReference: invoice.invoiceNumber,
@@ -242,22 +242,22 @@ export const recordSalesPayment = async ({
 };
 
 
-export const getSalesPaymentHistory = async (hotel_id, invoiceId) => {
+export const getSalesPaymentHistory = async (organizationId, invoiceId) => {
 
   return SalesPayment
-    .find({ hotel_id, invoice_id: invoiceId })
+    .find({ organizationId, invoice_id: invoiceId })
     .sort({ receivedAt: -1 })
     .populate("recordedBy", "name role");
 
 };
 
 
-export const getCustomerOutstanding = async (hotel_id, customer_id) => {
+export const getCustomerOutstanding = async (organizationId, customer_id) => {
 
   const agg = await SalesInvoice.aggregate([
     {
       $match: {
-        hotel_id: new mongoose.Types.ObjectId(hotel_id),
+        organizationId: new mongoose.Types.ObjectId(organizationId),
         customer_id: new mongoose.Types.ObjectId(customer_id),
         invoiceState: SALES_INVOICE_STATE.POSTED,
       },
@@ -289,3 +289,4 @@ export const getCustomerOutstanding = async (hotel_id, customer_id) => {
   };
 
 };
+
