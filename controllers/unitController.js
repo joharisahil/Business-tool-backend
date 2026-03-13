@@ -11,11 +11,9 @@ import * as auditService from "../services/auditService.js";
 
 import { AUDIT_ENTITY_TYPE, AUDIT_ACTION } from "../constants/enums.js";
 
-
 // ── List Units ───────────────────────────────────────────
 
 export const listUnits = asyncHandler(async (req, res) => {
-
   const { category, active, search, page = 1, limit = 100 } = req.query;
 
   const filter = { organizationId: req.user.organizationId };
@@ -49,20 +47,15 @@ export const listUnits = asyncHandler(async (req, res) => {
     page: parseInt(page),
     pages: Math.ceil(total / parseInt(limit)),
   });
-
 });
-
 
 // ── Get Unit ─────────────────────────────────────────────
 
 export const getUnit = asyncHandler(async (req, res) => {
-
-  const unit = await Unit
-    .findOne({
-      _id: req.params.id,
-      organizationId: req.user.organizationId,
-    })
-    .populate("baseUnit_id", "name shortCode");
+  const unit = await Unit.findOne({
+    _id: req.params.id,
+    organizationId: req.user.organizationId,
+  }).populate("baseUnit_id", "name shortCode");
 
   if (!unit) {
     return res.status(404).json({
@@ -75,14 +68,11 @@ export const getUnit = asyncHandler(async (req, res) => {
     success: true,
     data: unit,
   });
-
 });
-
 
 // ── Create Unit ──────────────────────────────────────────
 
 export const createUnit = asyncHandler(async (req, res) => {
-
   const unit = await Unit.create({
     ...req.body,
     organizationId: req.user.organizationId,
@@ -105,14 +95,11 @@ export const createUnit = asyncHandler(async (req, res) => {
     success: true,
     data: unit,
   });
-
 });
-
 
 // ── Update Unit ──────────────────────────────────────────
 
 export const updateUnit = asyncHandler(async (req, res) => {
-
   const unit = await Unit.findOne({
     _id: req.params.id,
     organizationId: req.user.organizationId,
@@ -146,14 +133,11 @@ export const updateUnit = asyncHandler(async (req, res) => {
     success: true,
     data: unit,
   });
-
 });
-
 
 // ── Toggle Unit ──────────────────────────────────────────
 
 export const toggleUnit = asyncHandler(async (req, res) => {
-
   const unit = await Unit.findOne({
     _id: req.params.id,
     organizationId: req.user.organizationId,
@@ -174,14 +158,11 @@ export const toggleUnit = asyncHandler(async (req, res) => {
     success: true,
     data: unit,
   });
-
 });
-
 
 // ── Preview Conversion ───────────────────────────────────
 
 export const previewConversion = asyncHandler(async (req, res) => {
-
   const { fromUnit_id, toUnit_id, quantity } = req.body;
 
   if (!fromUnit_id || !toUnit_id || !quantity) {
@@ -195,21 +176,18 @@ export const previewConversion = asyncHandler(async (req, res) => {
     req.user.organizationId,
     fromUnit_id,
     toUnit_id,
-    parseFloat(quantity)
+    parseFloat(quantity),
   );
 
   res.json({
     success: true,
     data: result,
   });
-
 });
-
 
 // ── Related Units ────────────────────────────────────────
 
 export const getRelatedUnits = asyncHandler(async (req, res) => {
-
   const unit = await Unit.findOne({
     _id: req.params.id,
     organizationId: req.user.organizationId,
@@ -229,25 +207,19 @@ export const getRelatedUnits = asyncHandler(async (req, res) => {
     : unit;
 
   if (baseUnit && baseUnit.baseUnit_id) {
-
     const grandBase = await Unit.findById(baseUnit.baseUnit_id);
 
     if (grandBase) baseId = grandBase._id;
-
   }
 
   const related = await Unit.find({
     organizationId: req.user.organizationId,
     isActive: true,
-    $or: [
-      { _id: baseId },
-      { baseUnit_id: baseId },
-    ],
+    $or: [{ _id: baseId }, { baseUnit_id: baseId }],
   }).sort({ conversionFactor: 1 });
 
   res.json({
     success: true,
     data: related,
   });
-
 });

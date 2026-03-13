@@ -22,9 +22,7 @@ import {
   AUDIT_ACTION,
 } from "../constants/enums.js";
 
-
 function getCashOrBankCode(method) {
-
   const bankMethods = [
     PAYMENT_METHOD.BANK_TRANSFER,
     PAYMENT_METHOD.CHEQUE,
@@ -36,9 +34,7 @@ function getCashOrBankCode(method) {
   return bankMethods.includes(method)
     ? DEFAULT_LEDGER_CODES.BANK
     : DEFAULT_LEDGER_CODES.CASH;
-
 }
-
 
 export const recordSalesPayment = async ({
   organizationId,
@@ -51,7 +47,6 @@ export const recordSalesPayment = async ({
   user,
   ipAddress = "",
 }) => {
-
   if (!amount || amount <= 0)
     throw new Error("Payment amount must be positive.");
 
@@ -59,16 +54,16 @@ export const recordSalesPayment = async ({
   session.startTransaction();
 
   try {
-
-    const invoice = await SalesInvoice
-      .findOne({ _id: invoiceId, organizationId })
-      .session(session);
+    const invoice = await SalesInvoice.findOne({
+      _id: invoiceId,
+      organizationId,
+    }).session(session);
 
     if (!invoice) throw new Error("Sales invoice not found.");
 
     if (invoice.invoiceState !== SALES_INVOICE_STATE.POSTED) {
       throw new Error(
-        "Payments can only be recorded against POSTED sales invoices."
+        "Payments can only be recorded against POSTED sales invoices.",
       );
     }
 
@@ -78,11 +73,9 @@ export const recordSalesPayment = async ({
 
     const cashBankCode = getCashOrBankCode(method);
 
-
     // AR portion vs advance portion
     const arPortion = Math.min(amount, outstanding);
     const advancePortion = Math.max(0, amount - outstanding);
-
 
     // ── Journal Lines ─────────────────────────────
     const journalLines = [
@@ -94,7 +87,6 @@ export const recordSalesPayment = async ({
       },
     ];
 
-
     if (arPortion > 0) {
       journalLines.push({
         accountCode: DEFAULT_LEDGER_CODES.ACCOUNTS_RECEIVABLE,
@@ -103,7 +95,6 @@ export const recordSalesPayment = async ({
         description: `AR settlement: ${invoice.invoiceNumber}`,
       });
     }
-
 
     if (advancePortion > 0) {
       journalLines.push({
@@ -114,7 +105,6 @@ export const recordSalesPayment = async ({
       });
     }
 
-
     const journalEntry = await journalService.createEntry({
       organizationId,
       referenceType: JOURNAL_REFERENCE_TYPE.SALES_PAYMENT,
@@ -122,12 +112,11 @@ export const recordSalesPayment = async ({
       referenceNumber: invoice.invoiceNumber,
       lines: journalLines,
       narration: `Payment received: ₹${amount.toFixed(
-        2
+        2,
       )} from ${invoice.customerName} | Inv: ${invoice.invoiceNumber}`,
       user,
       session,
     });
-
 
     // ── Payment Record ─────────────────────────────
     const [payment] = await SalesPayment.create(
@@ -147,23 +136,22 @@ export const recordSalesPayment = async ({
           recordedBy: user._id,
         },
       ],
-      { session }
+      { session },
     );
-
 
     // ── Update Invoice ─────────────────────────────
-    const newPaidAmount = parseFloat(
-      (invoice.paidAmount + amount).toFixed(2)
+    const newPaidAmount = Number((invoice.paidAmount + amount).toFixed(2));
+
+    const newOutstanding = Number(
+      (invoice.grandTotal - newPaidAmount).toFixed(2),
     );
 
-    const newOutstanding = parseFloat(
-      Math.max(0, invoice.grandTotal - newPaidAmount).toFixed(2)
-    );
-
+    if (newOutstanding < 0.01) {
+      newOutstanding = 0;
+    }
     const newAdvance = parseFloat(
-      (invoice.advanceAmount + advancePortion).toFixed(2)
+      (invoice.advanceAmount + advancePortion).toFixed(2),
     );
-
 
     let newPaymentStatus;
 
@@ -177,7 +165,6 @@ export const recordSalesPayment = async ({
       newPaymentStatus = SALES_PAYMENT_STATUS.UNPAID;
     }
 
-
     await SalesInvoice.updateOne(
       { _id: invoice._id },
       {
@@ -189,9 +176,8 @@ export const recordSalesPayment = async ({
           updatedBy: user._id,
         },
       },
-      { session }
+      { session },
     );
-
 
     // ── Audit Log ─────────────────────────────
     await auditService.log({
@@ -201,11 +187,9 @@ export const recordSalesPayment = async ({
       entityReference: invoice.invoiceNumber,
       action: AUDIT_ACTION.PAYMENT_RECORDED,
       description: `Payment ₹${amount.toFixed(
-        2
+        2,
       )} received via ${method} for ${invoice.invoiceNumber}. Outstanding: ₹${newOutstanding}${
-        advancePortion > 0
-          ? ` | Advance: ₹${advancePortion.toFixed(2)}`
-          : ""
+        advancePortion > 0 ? ` | Advance: ₹${advancePortion.toFixed(2)}` : ""
       }`,
       before: {
         paidAmount: invoice.paidAmount,
@@ -221,39 +205,26 @@ export const recordSalesPayment = async ({
       session,
     });
 
-
     await session.commitTransaction();
 
     const updatedInvoice = await SalesInvoice.findById(invoice._id);
 
     return { payment, invoice: updatedInvoice };
-
   } catch (err) {
-
     await session.abortTransaction();
     throw err;
-
   } finally {
-
     session.endSession();
-
   }
-
 };
-
 
 export const getSalesPaymentHistory = async (organizationId, invoiceId) => {
-
-  return SalesPayment
-    .find({ organizationId, invoice_id: invoiceId })
+  return SalesPayment.find({ organizationId, invoice_id: invoiceId })
     .sort({ receivedAt: -1 })
     .populate("recordedBy", "name role");
-
 };
 
-
 export const getCustomerOutstanding = async (organizationId, customer_id) => {
-
   const agg = await SalesInvoice.aggregate([
     {
       $match: {
@@ -287,6 +258,4 @@ export const getCustomerOutstanding = async (organizationId, customer_id) => {
     outstanding: parseFloat(agg[0].totalOutstanding.toFixed(2)),
     advance: parseFloat(agg[0].totalAdvance.toFixed(2)),
   };
-
 };
-

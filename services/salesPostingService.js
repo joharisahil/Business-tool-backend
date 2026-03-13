@@ -7,6 +7,7 @@ import * as journalService from "./journalService.js";
 import * as stockService from "./stockService.js";
 import * as taxService from "./taxService.js";
 import * as auditService from "./auditService.js";
+import { SALES_PAYMENT_STATUS } from "../constants/enums.js";
 
 import {
   INVOICE_STATE,
@@ -254,17 +255,12 @@ if (item.isPerishable) {
     invoice.journalEntry_id = revenueJournal._id;
 
     // Auto-set payment fields
-    if (invoice.paymentMode === "CREDIT") {
-      invoice.paidAmount = 0;
-      invoice.outstandingAmount = invoice.grandTotal;
-      invoice.paymentStatus = "UNPAID";
-    } else {
-      invoice.paidAmount = invoice.grandTotal;
-      invoice.outstandingAmount = 0;
-      invoice.paymentStatus = "PAID";
-      invoice.paymentDate = new Date();
-    }
+// When invoice is posted it should always start unpaid.
+// Payment will be recorded through SalesPayment entries.
 
+invoice.paidAmount = 0;
+invoice.outstandingAmount = invoice.grandTotal;
+invoice.paymentStatus = SALES_PAYMENT_STATUS.UNPAID;
     invoice.stateLog.push({
       from: INVOICE_STATE.APPROVED,
       to: INVOICE_STATE.POSTED,

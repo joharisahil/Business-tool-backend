@@ -28,9 +28,7 @@ const generateInvoiceNumber = async (organizationId) => {
     .sort({ invoiceNumber: -1 })
     .select("invoiceNumber");
 
-  const seq = last
-    ? parseInt(last.invoiceNumber.split("-").pop(), 10) + 1
-    : 1;
+  const seq = last ? parseInt(last.invoiceNumber.split("-").pop(), 10) + 1 : 1;
 
   return `${prefix}${String(seq).padStart(5, "0")}`;
 };
@@ -122,8 +120,7 @@ export const createSalesInvoice = asyncHandler(async (req, res) => {
     const sgstAmount = (taxableAmount * gstPercentage) / 200;
     const igstAmount = 0;
 
-    const totalAmount =
-      taxableAmount + cgstAmount + sgstAmount + igstAmount;
+    const totalAmount = taxableAmount + cgstAmount + sgstAmount + igstAmount;
 
     enrichedItems.push({
       item_id: inventoryItem._id,
@@ -163,9 +160,7 @@ export const createSalesInvoice = asyncHandler(async (req, res) => {
 
   const grandTotal = subtotal + totalTax;
 
-  const invoiceNumber = await generateInvoiceNumber(
-    req.user.organizationId
-  );
+  const invoiceNumber = await generateInvoiceNumber(req.user.organizationId);
 
   const invoice = await SalesInvoice.create({
     organizationId: req.user.organizationId,
@@ -218,7 +213,9 @@ export const approveSalesInvoice = asyncHandler(async (req, res) => {
   });
 
   if (!invoice)
-    return res.status(404).json({ success: false, message: MSG.INVOICE_NOT_FOUND });
+    return res
+      .status(404)
+      .json({ success: false, message: MSG.INVOICE_NOT_FOUND });
 
   const allowed = INVOICE_TRANSITIONS[invoice.invoiceState];
 
@@ -227,7 +224,7 @@ export const approveSalesInvoice = asyncHandler(async (req, res) => {
       success: false,
       message: MSG.INVOICE_CANNOT_TRANSITION(
         invoice.invoiceState,
-        INVOICE_STATE.APPROVED
+        INVOICE_STATE.APPROVED,
       ),
     });
 
@@ -266,7 +263,9 @@ export const cancelSalesInvoice = asyncHandler(async (req, res) => {
   });
 
   if (!invoice)
-    return res.status(404).json({ success: false, message: MSG.INVOICE_NOT_FOUND });
+    return res
+      .status(404)
+      .json({ success: false, message: MSG.INVOICE_NOT_FOUND });
 
   if (invoice.invoiceState === INVOICE_STATE.POSTED)
     return res.status(400).json({
@@ -286,7 +285,6 @@ export const cancelSalesInvoice = asyncHandler(async (req, res) => {
     message: "Sales invoice cancelled.",
   });
 });
-
 
 //temp
 export const recordSalesPayment = asyncHandler(async (req, res) => {
@@ -428,7 +426,7 @@ export const getCustomerOutstanding = asyncHandler(async (req, res) => {
 
   const totalOutstanding = invoices.reduce(
     (sum, invoice) => sum + invoice.outstandingAmount,
-    0
+    0,
   );
 
   res.json({

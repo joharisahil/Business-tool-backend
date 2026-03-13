@@ -33,11 +33,11 @@ export const listItems = asyncHandler(async (req, res) => {
     items.map(async (item) => {
       const currentStock = await stockService.getCurrentStock(
         req.user.organizationId,
-        item._id
+        item._id,
       );
 
       return { ...item.toObject(), currentStock };
-    })
+    }),
   );
 
   res.json({ success: true, data: enriched });
@@ -59,7 +59,7 @@ export const getItem = asyncHandler(async (req, res) => {
 
   const currentStock = await stockService.getCurrentStock(
     req.user.organizationId,
-    item._id
+    item._id,
   );
 
   res.json({
@@ -77,6 +77,9 @@ export const createItem = asyncHandler(async (req, res) => {
     name,
     description,
     unit,
+    purchaseUnit_id,
+    saleUnits,
+
     costPrice,
     sellingPrice,
     minimumStock,
@@ -97,6 +100,9 @@ export const createItem = asyncHandler(async (req, res) => {
     sku,
     name,
     description,
+    purchaseUnit_id,
+    saleUnits,
+
     unit,
     costPrice,
     sellingPrice: sellingPrice || 0,
