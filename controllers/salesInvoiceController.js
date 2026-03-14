@@ -1,4 +1,5 @@
 import SalesInvoice from "../models/SalesInvoice.js";
+import SalesPayment from "../models/SalesPayment.js";
 import InventoryItem from "../models/InventoryItem.js";
 
 import * as taxService from "../services/taxService.js";
@@ -314,7 +315,20 @@ export const recordSalesPayment = asyncHandler(async (req, res) => {
       message: "Payment exceeds outstanding amount",
     });
 
-  // Update invoice
+  // 🔹 CREATE PAYMENT RECORD
+  const payment = await SalesPayment.create({
+    organizationId: req.user.organizationId,
+    invoice_id: invoice._id,
+    invoiceNumber: invoice.invoiceNumber,
+    customer_id: invoice.customer_id,
+    amount,
+    method,
+    reference,
+    receivedAt: new Date(),
+    recordedBy: req.user._id,
+  });
+
+  // 🔹 UPDATE INVOICE
   invoice.paidAmount += amount;
   invoice.outstandingAmount -= amount;
 
@@ -324,17 +338,12 @@ export const recordSalesPayment = asyncHandler(async (req, res) => {
     invoice.paymentStatus = PAYMENT_STATUS.PARTIAL;
   }
 
-  // Save payment snapshot
-  invoice.paymentMethod = method;
-  invoice.paymentReference = reference;
-  invoice.paymentDate = new Date();
-
   await invoice.save();
 
-  res.status(200).json({
-    success: true,
-    data: invoice,
-  });
+ res.status(200).json({
+  success: true,
+  data: invoice,
+});
 });
 
 export const getSalesPaymentHistory = asyncHandler(async (req, res) => {

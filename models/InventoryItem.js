@@ -8,6 +8,7 @@
 import mongoose from "mongoose";
 import { UNIT_TYPES } from "../constants/enums.js";
 
+
 const inventoryItemSchema = new mongoose.Schema(
   {
     organizationId: {

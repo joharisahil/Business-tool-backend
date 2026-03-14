@@ -6,7 +6,7 @@
  */
 
 import { asyncHandler } from "../utils/asyncHandler.js";
-
+import Unit from "../models/Unit.js";
 import InventoryItem from "../models/InventoryItem.js";
 import * as stockService from "../services/stockService.js";
 import * as auditService from "../services/auditService.js";
@@ -69,7 +69,15 @@ export const getItem = asyncHandler(async (req, res) => {
 });
 
 // ── Create ───────────────────────────────────────────────────────
+const resolveBaseUnit = async (unit) => {
+  let current = unit;
 
+  while (current.baseUnit_id) {
+    current = await Unit.findById(current.baseUnit_id);
+  }
+
+  return current;
+};
 export const createItem = asyncHandler(async (req, res) => {
   const {
     category_id,
@@ -79,7 +87,6 @@ export const createItem = asyncHandler(async (req, res) => {
     unit,
     purchaseUnit_id,
     saleUnits,
-
     costPrice,
     sellingPrice,
     minimumStock,
@@ -94,21 +101,83 @@ export const createItem = asyncHandler(async (req, res) => {
     });
   }
 
+  // ─────────────────────────────────────────
+  // Validate base unit
+  // ─────────────────────────────────────────
+  const baseUnit = await Unit.findOne({ shortCode: unit });
+
+  if (!baseUnit) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid base unit.",
+    });
+  }
+
+  if (baseUnit.baseUnit_id) {
+    return res.status(400).json({
+      success: false,
+      message: "Base unit cannot be a derived unit.",
+    });
+  }
+
+  // ─────────────────────────────────────────
+  // Validate purchase unit
+  // ─────────────────────────────────────────
+ if (purchaseUnit_id) {
+  const purchaseUnit = await Unit.findById(purchaseUnit_id);
+
+  if (!purchaseUnit) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid purchase unit.",
+    });
+  }
+
+  const purchaseBase = await resolveBaseUnit(purchaseUnit);
+
+  if (purchaseBase._id.toString() !== baseUnit._id.toString()) {
+    return res.status(400).json({
+      success: false,
+      message: "Purchase unit must convert to the base unit.",
+    });
+  }
+}
+  // ─────────────────────────────────────────
+  // Validate sale units
+  // ─────────────────────────────────────────
+  if (saleUnits && saleUnits.length) {
+    const units = await Unit.find({ _id: { $in: saleUnits } });
+
+  for (const u of units) {
+  const saleBase = await resolveBaseUnit(u);
+
+  if (saleBase._id.toString() !== baseUnit._id.toString()) {
+        return res.status(400).json({
+          success: false,
+          message: `Sale unit ${u.name} does not match base unit.`,
+        });
+      }
+    }
+  }
+
   const item = await InventoryItem.create({
     organizationId: req.user.organizationId,
     category_id,
     sku,
     name,
     description,
+
+    unit: baseUnit.shortCode, // always base unit
     purchaseUnit_id,
     saleUnits,
 
-    unit,
     costPrice,
     sellingPrice: sellingPrice || 0,
     minimumStock: minimumStock || 0,
+
     isPerishable: isPerishable || false,
     shelfLifeDays: isPerishable ? shelfLifeDays : null,
+
     createdBy: req.user._id,
   });
 
@@ -126,6 +195,62 @@ export const createItem = asyncHandler(async (req, res) => {
 
   res.status(201).json({ success: true, data: item });
 });
+// export const createItem = asyncHandler(async (req, res) => {
+//   const {
+//     category_id,
+//     sku,
+//     name,
+//     description,
+//     unit,
+//     purchaseUnit_id,
+//     saleUnits,
+
+//     costPrice,
+//     sellingPrice,
+//     minimumStock,
+//     isPerishable,
+//     shelfLifeDays,
+//   } = req.body;
+
+//   if (isPerishable && !shelfLifeDays) {
+//     return res.status(400).json({
+//       success: false,
+//       message: "shelfLifeDays is required for perishable items.",
+//     });
+//   }
+
+//   const item = await InventoryItem.create({
+//     organizationId: req.user.organizationId,
+//     category_id,
+//     sku,
+//     name,
+//     description,
+//     purchaseUnit_id,
+//     saleUnits,
+
+//     unit,
+//     costPrice,
+//     sellingPrice: sellingPrice || 0,
+//     minimumStock: minimumStock || 0,
+//     isPerishable: isPerishable || false,
+//     shelfLifeDays: isPerishable ? shelfLifeDays : null,
+//     createdBy: req.user._id,
+//   });
+
+//   await auditService.log({
+//     organizationId: req.user.organizationId,
+//     entityType: AUDIT_ENTITY_TYPE.INVENTORY_ITEM,
+//     entity_id: item._id,
+//     entityReference: item.sku,
+//     action: AUDIT_ACTION.CREATED,
+//     description: `Item '${item.name}' (${item.sku}) created`,
+//     after: item.toObject(),
+//     user: req.user,
+//     ipAddress: req.ip,
+//   });
+
+//   res.status(201).json({ success: true, data: item });
+// });
 
 // ── Update ───────────────────────────────────────────────────────
 

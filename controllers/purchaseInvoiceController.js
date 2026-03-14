@@ -162,6 +162,7 @@ export const createInvoice = asyncHandler(async (req, res) => {
       item_id: inventoryItem._id,
       itemName: inventoryItem.name,
       itemSku: inventoryItem.sku,
+      purchaseUnit_id: inventoryItem.purchaseUnit_id,
       quantity: item.quantity,
       unitPrice: item.unitPrice,
       gstPercentage: item.gstPercentage,

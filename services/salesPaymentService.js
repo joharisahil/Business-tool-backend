@@ -117,7 +117,7 @@ export const recordSalesPayment = async ({
       user,
       session,
     });
-
+    console.log("Creating SalesPayment...");
     // ── Payment Record ─────────────────────────────
     const [payment] = await SalesPayment.create(
       [
@@ -142,9 +142,9 @@ export const recordSalesPayment = async ({
     // ── Update Invoice ─────────────────────────────
     const newPaidAmount = Number((invoice.paidAmount + amount).toFixed(2));
 
-    const newOutstanding = Number(
-      (invoice.grandTotal - newPaidAmount).toFixed(2),
-    );
+  let newOutstanding = Number(
+  (invoice.grandTotal - newPaidAmount).toFixed(2),
+);
 
     if (newOutstanding < 0.01) {
       newOutstanding = 0;
@@ -204,7 +204,7 @@ export const recordSalesPayment = async ({
       ipAddress,
       session,
     });
-
+    console.log("Committing payment transaction...");
     await session.commitTransaction();
 
     const updatedInvoice = await SalesInvoice.findById(invoice._id);

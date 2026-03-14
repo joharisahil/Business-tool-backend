@@ -17,7 +17,7 @@ const { organizationId } = req.user;
   const payments = await SalesPayment.find({
     organizationId: organizationId
   })
-  .populate("invoiceId", "invoiceNumber")
+ .populate("invoice_id", "invoiceNumber")
   .populate("recordedBy", "name")
   .sort({ paidAt: -1 })
 .lean();
@@ -29,25 +29,26 @@ const { organizationId } = req.user;
 
 });
 
+//in future we might use 
+// export const recordPayment = asyncHandler(async (req, res) => {
+//     console.log("Recording payment for invoice:", req.params.invoiceId);
+//   const result = await salesPaymentService.recordSalesPayment({
+//     organizationId: req.user.organizationId,
+//     invoiceId: req.params.invoiceId,
+//     amount: req.body.amount,
+//     method: req.body.method,
+//     reference: req.body.reference,
+//     receivedAt: req.body.receivedAt,
+//     notes: req.body.notes,
+//     user: req.user,
+//     ipAddress: req.ip,
+//   });
 
-export const recordPayment = asyncHandler(async (req, res) => {
-  const result = await salesPaymentService.recordSalesPayment({
-    organizationId: req.user.organizationId,
-    invoiceId: req.params.invoiceId,
-    amount: req.body.amount,
-    method: req.body.method,
-    reference: req.body.reference,
-    receivedAt: req.body.receivedAt,
-    notes: req.body.notes,
-    user: req.user,
-    ipAddress: req.ip,
-  });
-
-  res.status(201).json({
-    success: true,
-    data: result,
-  });
-});
+//   res.status(201).json({
+//     success: true,
+//     data: result,
+//   });
+// });
 
 // ── Payment History ──────────────────────────────────────
 

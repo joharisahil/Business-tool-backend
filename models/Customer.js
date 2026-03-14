@@ -44,6 +44,7 @@ const customerSchema = new mongoose.Schema(
       type: String,
       trim: true,
       default: "",
+      unique:"true",
     },
 
     address: {

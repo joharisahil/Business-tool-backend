@@ -7,11 +7,7 @@
  */
 
 import mongoose from "mongoose";
-import {
-  INVOICE_STATE,
-  PAYMENT_STATUS,
-  TAX_TYPE,
-} from "../constants/enums.js";
+import { INVOICE_STATE, PAYMENT_STATUS, TAX_TYPE } from "../constants/enums.js";
 
 // ── Line Item Sub-document ───────────────────────────────────────
 const lineItemSchema = new mongoose.Schema(
@@ -45,6 +41,11 @@ const lineItemSchema = new mongoose.Schema(
       enum: Object.values(TAX_TYPE),
       default: TAX_TYPE.NONE,
     },
+    purchaseUnit_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Unit",
+      required: true,
+    },
     // Calculated server-side
     subtotal: { type: Number, required: true },
     cgstAmount: { type: Number, default: 0 },
@@ -57,7 +58,7 @@ const lineItemSchema = new mongoose.Schema(
     expiryDate: { type: Date, default: null },
     isPerishable: { type: Boolean, default: false },
   },
-  { _id: true }
+  { _id: true },
 );
 
 // ── Tax Breakdown Sub-document ───────────────────────────────────
@@ -68,7 +69,7 @@ const taxBreakdownSchema = new mongoose.Schema(
     igst: { type: Number, default: 0 },
     totalTax: { type: Number, default: 0 },
   },
-  { _id: false }
+  { _id: false },
 );
 
 // ── State Log Sub-document ───────────────────────────────────────
@@ -84,7 +85,7 @@ const stateLogSchema = new mongoose.Schema(
     at: { type: Date, default: Date.now },
     note: { type: String, trim: true, default: "" },
   },
-  { _id: false }
+  { _id: false },
 );
 
 // ── Main Schema ──────────────────────────────────────────────────
@@ -92,7 +93,7 @@ const purchaseInvoiceSchema = new mongoose.Schema(
   {
     organizationId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Organization',
+      ref: "Organization",
       required: true,
       index: true,
     },
@@ -166,15 +167,19 @@ const purchaseInvoiceSchema = new mongoose.Schema(
     timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
-  }
+  },
 );
 
 // ── Indexes ─────────────────────────────────────────────────────
 purchaseInvoiceSchema.index(
   { organizationId: 1, invoiceNumber: 1 },
-  { unique: true }
+  { unique: true },
 );
-purchaseInvoiceSchema.index({ organizationId: 1, vendor_id: 1, invoiceState: 1 });
+purchaseInvoiceSchema.index({
+  organizationId: 1,
+  vendor_id: 1,
+  invoiceState: 1,
+});
 purchaseInvoiceSchema.index({ organizationId: 1, createdAt: -1 });
 purchaseInvoiceSchema.index({
   organizationId: 1,

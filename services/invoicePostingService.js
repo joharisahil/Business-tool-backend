@@ -20,9 +20,10 @@
  *  7. Commit session
  *
  * On any failure → session.abortTransaction()
- */import mongoose from "mongoose";
+ */ import mongoose from "mongoose";
 import PurchaseInvoice from "../models/PurchaseInvoice.js";
 import InventoryBatch from "../models/InventoryBatch.js";
+import Unit from "../models/Unit.js";
 import InventoryItem from "../models/InventoryItem.js";
 import * as journalService from "./journalService.js";
 import * as stockService from "./stockService.js";
@@ -66,8 +67,8 @@ export async function postInvoice({
       throw new Error(
         MSG.INVOICE_CANNOT_TRANSITION(
           invoice.invoiceState,
-          INVOICE_STATE.POSTED
-        )
+          INVOICE_STATE.POSTED,
+        ),
       );
 
     if (!invoice.items || invoice.items.length === 0)
@@ -82,76 +83,79 @@ export async function postInvoice({
         unitPrice: i.unitPrice,
         gstPercentage: i.gstPercentage,
       })),
-      false
+      false,
     );
 
     const tolerance = 0.05;
     if (Math.abs(recalc.grandTotal - invoice.grandTotal) > tolerance) {
       throw new Error(
-        `Invoice total mismatch. Stored: ₹${invoice.grandTotal}, Calculated: ₹${recalc.grandTotal}. Please re-save the draft.`
+        `Invoice total mismatch. Stored: ₹${invoice.grandTotal}, Calculated: ₹${recalc.grandTotal}. Please re-save the draft.`,
       );
     }
 
     // ── Step 3: Process line items ────────────────────────────────
     for (let i = 0; i < invoice.items.length; i++) {
-      const lineItem = invoice.items[i];
+  const lineItem = invoice.items[i];
 
-      const item = await InventoryItem.findOne({
-        _id: lineItem.item_id,
-        organizationId,
-      }).session(session);
+  const item = await InventoryItem.findOne({
+    _id: lineItem.item_id,
+    organizationId,
+  }).session(session);
 
-      if (!item)
-        throw new Error(MSG.NOT_FOUND(`Item '${lineItem.itemName}'`));
+  if (!item) throw new Error(MSG.NOT_FOUND(`Item '${lineItem.itemName}'`));
 
-      let batch_id = null;
-      let batchNumber = "";
+  // 🔹 Get purchase unit
+  const unit = await Unit.findById(lineItem.purchaseUnit_id).session(session);
 
-      if (lineItem.isPerishable) {
-        if (!lineItem.batchNumber)
-          throw new Error(
-            `Batch number required for perishable item '${item.name}'.`
-          );
+  if (!unit) throw new Error(`Invalid unit for item '${item.name}'`);
 
-        if (!lineItem.expiryDate)
-          throw new Error(
-            `Expiry date required for perishable item '${item.name}'.`
-          );
+  // 🔹 Convert to base unit
+  const baseQty = lineItem.quantity * unit.conversionFactor;
 
-        const [batch] = await InventoryBatch.create(
-          [
-            {
-              organizationId,
-              item_id: item._id,
-              invoice_id: invoice._id,
-              batchNumber: lineItem.batchNumber,
-              expiryDate: lineItem.expiryDate,
-              receivedDate: new Date(),
-              receivedQuantity: lineItem.quantity,
-              remainingQuantity: lineItem.quantity,
-              unitCost: lineItem.unitPrice,
-            },
-          ],
-          { session }
-        );
+  let batch_id = null;
+  let batchNumber = "";
 
-        batch_id = batch._id;
-        batchNumber = batch.batchNumber;
-      }
+  if (lineItem.isPerishable) {
+    if (!lineItem.batchNumber)
+      throw new Error(`Batch number required for perishable item '${item.name}'.`);
 
-      await stockService.stockIn({
-        organizationId,
-        item_id: item._id,
-        quantity: lineItem.quantity,
-        referenceType: REFERENCE_TYPE.PURCHASE,
-        reference_id: invoice._id,
-        batch_id,
-        batchNumber,
-        notes: `Purchase posting: Invoice ${invoice.invoiceNumber}`,
-        user,
-        session,
-      });
-    }
+    if (!lineItem.expiryDate)
+      throw new Error(`Expiry date required for perishable item '${item.name}'.`);
+
+    const [batch] = await InventoryBatch.create(
+      [
+        {
+          organizationId,
+          item_id: item._id,
+          invoice_id: invoice._id,
+          batchNumber: lineItem.batchNumber,
+          expiryDate: lineItem.expiryDate,
+          receivedDate: new Date(),
+          receivedQuantity: baseQty,
+          remainingQuantity: baseQty,
+          unitCost: lineItem.unitPrice,
+        },
+      ],
+      { session }
+    );
+
+    batch_id = batch._id;
+    batchNumber = batch.batchNumber;
+  }
+
+  await stockService.stockIn({
+    organizationId,
+    item_id: item._id,
+    quantity: baseQty,
+    referenceType: REFERENCE_TYPE.PURCHASE,
+    reference_id: invoice._id,
+    batch_id,
+    batchNumber,
+    notes: `Purchase posting: Invoice ${invoice.invoiceNumber}`,
+    user,
+    session,
+  });
+}
 
     // ── Step 4: Journal Entry ─────────────────────────────────────
     const { DEBIT, CREDIT } = JOURNAL_ENTRY_TYPE;
@@ -231,7 +235,7 @@ export async function postInvoice({
         },
         $push: { stateLog: stateLogEntry },
       },
-      { session }
+      { session },
     );
 
     // ── Step 6: Audit log ─────────────────────────────────────────
@@ -256,7 +260,7 @@ export async function postInvoice({
 
     return PurchaseInvoice.findById(invoice._id).populate(
       "vendor_id",
-      "name gstin"
+      "name gstin",
     );
   } catch (err) {
     await session.abortTransaction();
