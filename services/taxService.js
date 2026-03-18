@@ -3,7 +3,7 @@
  * @description Calculates GST tax components for invoice line items.
  *              Supports CGST+SGST (intra-state) and IGST (inter-state).
  *              All calculations are performed on the backend — client values are ignored.
- */import { TAX_TYPE } from "../constants/enums.js";
+ */ import { TAX_TYPE } from "../constants/enums.js";
 
 /**
  * Determines whether to apply CGST+SGST or IGST
@@ -17,11 +17,14 @@ export function getTaxMode(isInterState = false) {
  */
 export function calculateLineItemTax({
   quantity,
+  baseQty,
   unitPrice,
   gstPercentage = 0,
   isInterState = false,
 }) {
-  const subtotal = round(quantity * unitPrice);
+  const effectiveQty = baseQty ?? quantity;
+
+  const subtotal = round(effectiveQty * unitPrice);
   const taxRate = gstPercentage / 100;
   const totalTax = round(subtotal * taxRate);
 
@@ -53,14 +56,10 @@ export function calculateLineItemTax({
     taxType,
   };
 }
-
 /**
  * Calculates totals for an entire invoice.
  */
-export function calculateInvoiceTotals(
-  lineItems,
-  isInterState = false
-) {
+export function calculateInvoiceTotals(lineItems, isInterState = false) {
   let subtotal = 0;
   let totalCgst = 0;
   let totalSgst = 0;
@@ -69,6 +68,7 @@ export function calculateInvoiceTotals(
   const enrichedItems = lineItems.map((item) => {
     const calc = calculateLineItemTax({
       quantity: item.quantity,
+      baseQty: item.baseQty,
       unitPrice: item.unitPrice,
       gstPercentage: item.gstPercentage || 0,
       isInterState,
@@ -112,7 +112,5 @@ export function calculateInvoiceTotals(
  * Rounds to 2 decimal places.
  */
 export function round(value) {
-  return (
-    Math.round((value + Number.EPSILON) * 100) / 100
-  );
+  return Math.round((value + Number.EPSILON) * 100) / 100;
 }

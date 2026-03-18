@@ -50,6 +50,7 @@ router.patch(
 
 // ── Inventory Items ───────────────────────────────────────────────
 router.get("/items", authorize(...MANAGER_ADMIN), itemCtrl.listItems);
+router.get("/items/paginated", authorize(...MANAGER_ADMIN), itemCtrl.listItemsPaginated);
 router.get("/items/:id", authorize(...MANAGER_ADMIN), itemCtrl.getItem);
 router.post("/items", authorize(...MANAGER_ADMIN), itemCtrl.createItem);
 router.put("/items/:id", authorize(...MANAGER_ADMIN), itemCtrl.updateItem);

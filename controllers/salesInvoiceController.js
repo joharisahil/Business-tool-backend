@@ -34,26 +34,44 @@ const generateInvoiceNumber = async (organizationId) => {
   return `${prefix}${String(seq).padStart(5, "0")}`;
 };
 export const listSalesInvoices = asyncHandler(async (req, res) => {
-  const { state, page = 1, limit = 20 } = req.query;
+  let { state, page = 1, limit = 20 } = req.query;
 
-  const filter = { organizationId: req.user.organizationId };
-  if (state) filter.invoiceState = state;
+  // ✅ Convert to numbers safely
+  page = Math.max(1, parseInt(page) || 1);
+  limit = Math.max(1, Math.min(100, parseInt(limit) || 20)); // max 100
+
+  const filter = {
+    organizationId: req.user.organizationId,
+  };
+
+  if (state) {
+    filter.invoiceState = state;
+  }
 
   const skip = (page - 1) * limit;
 
-  const total = await SalesInvoice.countDocuments(filter);
+  // ✅ Run in parallel (performance boost)
+  const [total, invoices] = await Promise.all([
+    SalesInvoice.countDocuments(filter),
+    SalesInvoice.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+  ]);
 
-  const invoices = await SalesInvoice.find(filter)
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(parseInt(limit));
+  const totalPages = Math.ceil(total / limit);
 
   res.json({
     success: true,
     data: invoices,
-    total,
-    page: Number(page),
-    pages: Math.ceil(total / limit),
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1,
+    },
   });
 });
 export const getSalesInvoice = asyncHandler(async (req, res) => {
@@ -110,11 +128,13 @@ export const createSalesInvoice = asyncHandler(async (req, res) => {
     }
 
     const quantity = Number(item.quantity);
+    const baseQty = Number(item.baseQty || quantity);
     const unitPrice = Number(item.unitPrice);
     const discount = Number(item.discount || 0);
     const gstPercentage = Number(item.gstPercentage || 0);
 
-    const lineSubtotal = quantity * unitPrice;
+    // ✅ FIXED CALCULATION
+    const lineSubtotal = baseQty * unitPrice;
     const taxableAmount = lineSubtotal - discount;
 
     const cgstAmount = (taxableAmount * gstPercentage) / 200;
@@ -122,7 +142,6 @@ export const createSalesInvoice = asyncHandler(async (req, res) => {
     const igstAmount = 0;
 
     const totalAmount = taxableAmount + cgstAmount + sgstAmount + igstAmount;
-
     enrichedItems.push({
       item_id: inventoryItem._id,
       itemName: inventoryItem.name,
@@ -143,6 +162,10 @@ export const createSalesInvoice = asyncHandler(async (req, res) => {
       igstAmount,
 
       totalAmount,
+      // 🔥 ADD THESE
+      saleUnitId: item.saleUnitId || null,
+      saleUnitCode: item.saleUnitCode || "",
+      baseQty: item.baseQty || quantity,
 
       deductStock: item.deductStock ?? true,
     });
@@ -340,10 +363,10 @@ export const recordSalesPayment = asyncHandler(async (req, res) => {
 
   await invoice.save();
 
- res.status(200).json({
-  success: true,
-  data: invoice,
-});
+  res.status(200).json({
+    success: true,
+    data: invoice,
+  });
 });
 
 export const getSalesPaymentHistory = asyncHandler(async (req, res) => {

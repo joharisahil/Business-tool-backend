@@ -44,6 +44,23 @@ const salesLineItemSchema = new mongoose.Schema(
       min: [0, "Unit price cannot be negative"],
     },
 
+    saleUnitId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Unit",
+      default: null,
+    },
+
+    saleUnitCode: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    baseQty: {
+      type: Number,
+      default: null,
+    },
+
     discount: {
       type: Number,
       default: 0,
@@ -77,7 +94,7 @@ const salesLineItemSchema = new mongoose.Schema(
       default: false,
     },
   },
-  { _id: true }
+  { _id: true },
 );
 
 const stateLogSchema = new mongoose.Schema(
@@ -88,7 +105,7 @@ const stateLogSchema = new mongoose.Schema(
     at: { type: Date, default: Date.now },
     note: { type: String, trim: true, default: "" },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const salesInvoiceSchema = new mongoose.Schema(
@@ -189,7 +206,11 @@ const salesInvoiceSchema = new mongoose.Schema(
 
     stateLog: [stateLogSchema],
 
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
     updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     approvedAt: { type: Date },
@@ -199,9 +220,12 @@ const salesInvoiceSchema = new mongoose.Schema(
     cancelledAt: { type: Date },
     cancellationReason: { type: String, trim: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-salesInvoiceSchema.index({ organizationId: 1, invoiceNumber: 1 }, { unique: true });
+salesInvoiceSchema.index(
+  { organizationId: 1, invoiceNumber: 1 },
+  { unique: true },
+);
 
 export default mongoose.model("SalesInvoice", salesInvoiceSchema);
