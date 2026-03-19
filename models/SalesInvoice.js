@@ -143,8 +143,8 @@ const salesInvoiceSchema = new mongoose.Schema(
       default: "",
     },
 
-    roomNumber: { type: String, trim: true, default: "" },
-    bookingRef: { type: String, trim: true, default: "" },
+    // roomNumber: { type: String, trim: true, default: "" },
+    // bookingRef: { type: String, trim: true, default: "" },
 
     items: {
       type: [salesLineItemSchema],

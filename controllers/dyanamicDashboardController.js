@@ -1,7 +1,7 @@
 // controllers/dashboardController.js
 import SalesPayment from "../models/SalesPayment.js";
 import SalesInvoice from "../models/SalesInvoice.js";
-
+import mongoose from "mongoose";
 /**
  * Get dashboard summary metrics
  * GET /api/dashboard/summary
@@ -264,34 +264,50 @@ export const getCustomerDashboard = async (req, res) => {
     } = req.query;
 
     const organizationId = req.user.organizationId;
-    const skip = (page - 1) * limit;
+const customerObjectId = new mongoose.Types.ObjectId(id);
+    // ✅ FIX 4: convert to numbers
+    const pageNum = Number(page);
+    const limitNum = Number(limit);
+    const skip = (pageNum - 1) * limitNum;
 
-    // Build match object for customer
+    // Base match (for invoices)
     const match = {
-      organizationId,
-      customer_id: id,
-    };
-    
-    // Add date range filter
-    if (startDate && endDate) {
+  organizationId,
+  customer_id: customerObjectId,
+};
+
+
+    // ✅ FIX 1: safe date validation
+    if (
+      startDate &&
+      endDate &&
+      !isNaN(new Date(startDate)) &&
+      !isNaN(new Date(endDate))
+    ) {
       match.createdAt = {
         $gte: new Date(startDate),
         $lte: new Date(endDate),
       };
     }
-    
-    // Add search filter within customer's invoices
+
+    // Search filter
     if (search) {
       match.$or = [
-        { invoiceNumber: { $regex: search, $options: 'i' } },
-        { 'items.description': { $regex: search, $options: 'i' } }
+        { invoiceNumber: { $regex: search, $options: "i" } },
+        { "items.description": { $regex: search, $options: "i" } },
       ];
     }
 
+    // ✅ FIX 3: separate match for summary (NO filters)
+ const summaryMatch = {
+  organizationId,
+  customer_id: customerObjectId,
+};
+
     const [summary, invoices, total] = await Promise.all([
-      // Customer summary with payment breakdown
+      // Summary (unfiltered)
       SalesInvoice.aggregate([
-        { $match: match },
+        { $match: summaryMatch },
         {
           $group: {
             _id: "$customer_id",
@@ -299,25 +315,25 @@ export const getCustomerDashboard = async (req, res) => {
             totalSpent: { $sum: "$grandTotal" },
             totalPaid: { $sum: "$paidAmount" },
             totalPending: { $sum: "$outstandingAmount" },
-            avgOrderValue: { $avg: "$grandTotal" }
+            avgOrderValue: { $avg: "$grandTotal" },
           },
         },
       ]),
 
-      // Paginated invoices
+      // Invoices (filtered)
       SalesInvoice.find(match)
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(Number(limit)),
+        .limit(limitNum),
 
-      // Total count for pagination
+      // Count (filtered)
       SalesInvoice.countDocuments(match),
     ]);
 
-    // Get payment history for this customer
+    // Payment history (unchanged)
     const paymentHistory = await SalesPayment.find({
       organizationId,
-      customer_id: id
+      customer_id: id,
     })
       .sort({ receivedAt: -1 })
       .limit(5);
@@ -330,16 +346,16 @@ export const getCustomerDashboard = async (req, res) => {
           totalSpent: 0,
           totalPaid: 0,
           totalPending: 0,
-          avgOrderValue: 0
+          avgOrderValue: 0,
         },
         invoices,
-        paymentHistory
+        paymentHistory,
       },
       pagination: {
         total,
-        page: Number(page),
-        limit: Number(limit),
-        totalPages: Math.ceil(total / limit),
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(total / limitNum),
       },
     });
   } catch (error) {

@@ -34,6 +34,7 @@ const generateInvoiceNumber = async (organizationId) => {
   return `${prefix}${String(seq).padStart(5, "0")}`;
 };
 export const listSalesInvoices = asyncHandler(async (req, res) => {
+  
   let { state, page = 1, limit = 20 } = req.query;
 
   // ✅ Convert to numbers safely
@@ -54,6 +55,7 @@ export const listSalesInvoices = asyncHandler(async (req, res) => {
   const [total, invoices] = await Promise.all([
     SalesInvoice.countDocuments(filter),
     SalesInvoice.find(filter)
+    .populate("customer_id", "name phone gstin")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit),
