@@ -8,7 +8,7 @@
  *  3. Entries are immutable — corrections via reversal only
  *  4. Reversal swaps DEBIT↔CREDIT on all lines and marks original as reversed
  *  5. Ledger balances are NEVER stored — always derived via aggregation
- */import mongoose from "mongoose";
+ */ import mongoose from "mongoose";
 import JournalEntry from "../models/JournalEntry.js";
 import LedgerAccount from "../models/LedgerAccount.js";
 import {
@@ -51,7 +51,7 @@ export async function resolveAccount(organizationId, code, session) {
 
   if (!account) {
     throw new Error(
-      `Ledger account '${code}' not found or inactive for this Organization.`
+      `Ledger account '${code}' not found or inactive for this Organization.`,
     );
   }
 
@@ -74,10 +74,7 @@ function validateBalance(lines) {
 
   if (diff > 0.005) {
     throw new Error(
-      MSG.JOURNAL_UNBALANCED(
-        totalDebit.toFixed(2),
-        totalCredit.toFixed(2)
-      )
+      MSG.JOURNAL_UNBALANCED(totalDebit.toFixed(2), totalCredit.toFixed(2)),
     );
   }
 
@@ -96,16 +93,14 @@ export async function createEntry({
   session,
 }) {
   if (!session)
-    throw new Error(
-      "journalService.createEntry requires a Mongoose session."
-    );
+    throw new Error("journalService.createEntry requires a Mongoose session.");
 
   const resolvedLines = await Promise.all(
     lines.map(async (line) => {
       const account = await resolveAccount(
         organizationId,
         line.accountCode,
-        session
+        session,
       );
 
       return {
@@ -116,16 +111,12 @@ export async function createEntry({
         amount: parseFloat(line.amount.toFixed(2)),
         description: line.description || "",
       };
-    })
+    }),
   );
 
-  const { totalDebit, totalCredit } =
-    validateBalance(resolvedLines);
+  const { totalDebit, totalCredit } = validateBalance(resolvedLines);
 
-  const entryNumber = await generateEntryNumber(
-    organizationId,
-    session
-  );
+  const entryNumber = await generateEntryNumber(organizationId, session);
 
   const [entry] = await JournalEntry.create(
     [
@@ -142,7 +133,7 @@ export async function createEntry({
         createdBy: user._id,
       },
     ],
-    { session }
+    { session },
   );
 
   return entry;
@@ -157,22 +148,17 @@ export async function reverseEntry({
   session,
 }) {
   if (!session)
-    throw new Error(
-      "journalService.reverseEntry requires a Mongoose session."
-    );
+    throw new Error("journalService.reverseEntry requires a Mongoose session.");
 
   const original = await JournalEntry.findOne({
     _id: originalEntryId,
     organizationId,
   }).session(session);
 
-  if (!original)
-    throw new Error(MSG.NOT_FOUND("Journal entry"));
+  if (!original) throw new Error(MSG.NOT_FOUND("Journal entry"));
 
   if (original.isReversed)
-    throw new Error(
-      "This journal entry has already been reversed."
-    );
+    throw new Error("This journal entry has already been reversed.");
 
   const { DEBIT, CREDIT } = JOURNAL_ENTRY_TYPE;
 
@@ -185,31 +171,25 @@ export async function reverseEntry({
     description: `REVERSAL: ${line.description}`,
   }));
 
-  const entryNumber = await generateEntryNumber(
-    organizationId,
-    session
-  );
+  const entryNumber = await generateEntryNumber(organizationId, session);
 
   const [reversalEntry] = await JournalEntry.create(
     [
       {
         organizationId,
         entryNumber,
-        referenceType:
-          JOURNAL_REFERENCE_TYPE.REVERSAL,
+        referenceType: JOURNAL_REFERENCE_TYPE.REVERSAL,
         reference_id: original._id,
         referenceNumber: `REV-${original.entryNumber}`,
         lines: reversedLines,
         totalDebit: original.totalCredit,
         totalCredit: original.totalDebit,
-        narration:
-          narration ||
-          `Reversal of ${original.entryNumber}`,
+        narration: narration || `Reversal of ${original.entryNumber}`,
         reversalOf: original._id,
         createdBy: user._id,
       },
     ],
-    { session }
+    { session },
   );
 
   await JournalEntry.updateOne(
@@ -220,24 +200,20 @@ export async function reverseEntry({
         reversalEntry_id: reversalEntry._id,
       },
     },
-    { session }
+    { session },
   );
 
   return reversalEntry;
 }
 
 /* ── Get Ledger Balance (Derived) ───────────────────────────────── */
-export async function getAccountBalance(
-  organizationId,
-  account_id
-) {
+export async function getAccountBalance(organizationId, account_id) {
   const account = await LedgerAccount.findOne({
     _id: account_id,
     organizationId,
   });
 
-  if (!account)
-    throw new Error(MSG.NOT_FOUND("Ledger account"));
+  if (!account) throw new Error(MSG.NOT_FOUND("Ledger account"));
 
   const agg = await JournalEntry.aggregate([
     { $match: { organizationId, isReversed: false } },
@@ -259,17 +235,11 @@ export async function getAccountBalance(
 
   const { ASSET, EXPENSE } = LEDGER_ACCOUNT_TYPE;
 
-  const isDebitNormal = [ASSET, EXPENSE].includes(
-    account.type
-  );
+  const isDebitNormal = [ASSET, EXPENSE].includes(account.type);
 
   const balance = isDebitNormal
-    ? account.openingBalance +
-      totals.DEBIT -
-      totals.CREDIT
-    : account.openingBalance +
-      totals.CREDIT -
-      totals.DEBIT;
+    ? account.openingBalance + totals.DEBIT - totals.CREDIT
+    : account.openingBalance + totals.CREDIT - totals.DEBIT;
 
   return {
     debit: parseFloat(totals.DEBIT.toFixed(2)),

@@ -170,15 +170,21 @@ journalEntrySchema.pre(
     const update = this.getUpdate();
 
     const allowedKeys = ["isReversed", "reversalEntry_id"];
+
     const setKeys = update?.$set ? Object.keys(update.$set) : [];
 
-    const forbidden = setKeys.filter((k) => !allowedKeys.includes(k));
+    // ✅ Ignore mongoose auto fields
+    const filteredKeys = setKeys.filter(
+      (key) => key !== "updatedAt" && key !== "__v"
+    );
+
+    const forbidden = filteredKeys.filter(
+      (k) => !allowedKeys.includes(k)
+    );
 
     if (forbidden.length > 0) {
       throw new Error(
-        `JournalEntry is immutable. Cannot update fields: ${forbidden.join(
-          ", "
-        )}`
+        `JournalEntry is immutable. Cannot update fields: ${forbidden.join(", ")}`
       );
     }
   }

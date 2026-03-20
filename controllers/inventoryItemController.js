@@ -10,7 +10,7 @@ import Unit from "../models/Unit.js";
 import InventoryItem from "../models/InventoryItem.js";
 import * as stockService from "../services/stockService.js";
 import * as auditService from "../services/auditService.js";
-
+import mongoose from "mongoose";
 import { AUDIT_ENTITY_TYPE, AUDIT_ACTION } from "../constants/enums.js";
 import { MSG } from "../constants/messages.js";
 

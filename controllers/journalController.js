@@ -28,8 +28,7 @@ export const listJournalEntries = asyncHandler(async (req, res) => {
   const filter = { organizationId: req.user.organizationId };
 
   if (referenceType) filter.referenceType = referenceType;
-  if (isReversed !== undefined)
-    filter.isReversed = isReversed === "true";
+  if (isReversed !== undefined) filter.isReversed = isReversed === "true";
 
   if (fromDate || toDate) {
     filter.createdAt = {};
