@@ -45,10 +45,7 @@ export async function log({
     await AuditLog.create([entry], options);
   } catch (err) {
     // Audit logging must never break the main transaction
-    console.error(
-      "[AuditService] Failed to write audit log:",
-      err.message
-    );
+    console.error("[AuditService] Failed to write audit log:", err.message);
   }
 }
 

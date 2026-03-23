@@ -58,6 +58,7 @@ export const listInvoices = asyncHandler(async (req, res) => {
     state,
     vendor_id,
     paymentStatus,
+    search,
     fromDate,
     toDate,
     page = 1,
@@ -66,32 +67,93 @@ export const listInvoices = asyncHandler(async (req, res) => {
 
   const filter = { organizationId: req.user.organizationId };
 
-  if (state) filter.invoiceState = state;
+  // Apply filters
+  if (state && state !== 'ALL') filter.invoiceState = state;
   if (vendor_id) filter.vendor_id = vendor_id;
-  if (paymentStatus) filter.paymentStatus = paymentStatus;
+  if (paymentStatus && paymentStatus !== 'ALL') filter.paymentStatus = paymentStatus;
 
+  // Date range filter
   if (fromDate || toDate) {
     filter.createdAt = {};
-    if (fromDate) filter.createdAt.$gte = new Date(fromDate);
-    if (toDate) filter.createdAt.$lte = new Date(toDate);
+    if (fromDate) {
+      const fromDateObj = new Date(fromDate);
+      fromDateObj.setHours(0, 0, 0, 0);
+      filter.createdAt.$gte = fromDateObj;
+    }
+    if (toDate) {
+      const toDateObj = new Date(toDate);
+      toDateObj.setHours(23, 59, 59, 999);
+      filter.createdAt.$lte = toDateObj;
+    }
   }
 
-  const skip = (parseInt(page) - 1) * parseInt(limit);
+  // Parse pagination params
+  const pageNum = parseInt(page, 10);
+  const limitNum = parseInt(limit, 10);
+  const skip = (pageNum - 1) * limitNum;
 
-  const total = await PurchaseInvoice.countDocuments(filter);
-
-  const invoices = await PurchaseInvoice.find(filter)
-    .populate("vendor_id", "name gstin")
+  // Get total count for pagination
+  let total = await PurchaseInvoice.countDocuments(filter);
+  
+  // Build query with population
+  let query = PurchaseInvoice.find(filter)
+    .populate("vendor_id", "name gstin email phone")
+    .populate("createdBy", "name email")
     .sort({ createdAt: -1 })
     .skip(skip)
-    .limit(parseInt(limit));
+    .limit(limitNum);
+
+  // Execute query
+  let invoices = await query.lean();
+
+  // Apply search filter (after population for text search)
+  if (search && search.trim()) {
+    const searchLower = search.toLowerCase().trim();
+    invoices = invoices.filter(inv => 
+      inv.invoiceNumber?.toLowerCase().includes(searchLower) ||
+      inv.vendor_id?.name?.toLowerCase().includes(searchLower) ||
+      inv.vendor_id?.gstin?.toLowerCase().includes(searchLower)
+    );
+    
+    // Recalculate total and re-paginate after search
+    total = invoices.length;
+    const startIndex = skip;
+    const endIndex = startIndex + limitNum;
+    invoices = invoices.slice(startIndex, endIndex);
+  }
+
+  // Format response to match frontend expectations
+  const formattedInvoices = invoices.map(inv => ({
+    id: inv._id,
+    invoiceNumber: inv.invoiceNumber,
+    vendorId: inv.vendor_id?._id,
+    vendorName: inv.vendor_id?.name,
+    vendorGSTIN: inv.vendor_id?.gstin,
+    items: inv.items,
+    subtotal: inv.subtotal,
+    gstAmount: inv.gstAmount,
+    taxBreakdown: inv.taxBreakdown,
+    grandTotal: inv.grandTotal,
+    paymentStatus: inv.paymentStatus,
+    invoiceState: inv.invoiceState,
+    paidAmount: inv.paidAmount,
+    outstandingAmount: inv.outstandingAmount,
+    payments: inv.payments || [],
+    notes: inv.notes,
+    createdBy: inv.createdBy?.name,
+    createdAt: inv.createdAt,
+    updatedAt: inv.updatedAt,
+  }));
+
+  const totalPages = Math.ceil(total / limitNum);
 
   res.json({
     success: true,
-    data: invoices,
-    total,
-    page: parseInt(page),
-    pages: Math.ceil(total / limit),
+    data: formattedInvoices,
+    total: total,
+    page: pageNum,
+    pages: totalPages,
+    limit: limitNum,
   });
 });
 
