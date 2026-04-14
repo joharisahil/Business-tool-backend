@@ -1,7 +1,7 @@
 import SalesInvoice from "../models/SalesInvoice.js";
 import SalesPayment from "../models/SalesPayment.js";
 import InventoryItem from "../models/InventoryItem.js";
-
+import Customer from "../models/Customer.js"
 import * as taxService from "../services/taxService.js";
 import * as auditService from "../services/auditService.js";
 import * as salesPostingService from "../services/salesPostingService.js";
@@ -35,11 +35,12 @@ const generateInvoiceNumber = async (organizationId) => {
 };
 export const listSalesInvoices = asyncHandler(async (req, res) => {
   
-  let { state, page = 1, limit = 20 } = req.query;
+  let { state, search, page = 1, limit = 20 } = req.query; // ✅ Add 'search' to destructuring
+ // console.log("this is hitting", { state, search, page, limit });
 
   // ✅ Convert to numbers safely
   page = Math.max(1, parseInt(page) || 1);
-  limit = Math.max(1, Math.min(100, parseInt(limit) || 20)); // max 100
+  limit = Math.max(1, Math.min(100, parseInt(limit) || 20));
 
   const filter = {
     organizationId: req.user.organizationId,
@@ -49,13 +50,37 @@ export const listSalesInvoices = asyncHandler(async (req, res) => {
     filter.invoiceState = state;
   }
 
+  // ✅ ADD SEARCH FUNCTIONALITY
+  if (search && search.trim()) {
+    const searchRegex = new RegExp(search, 'i'); // Case-insensitive search
+    
+    // First, find customers that match the search term
+    const matchingCustomers = await Customer.find({
+      organizationId: req.user.organizationId,
+      $or: [
+        { name: searchRegex },
+        { phone: searchRegex },
+        { gstin: searchRegex }
+      ]
+    }).select('_id');
+    
+    const customerIds = matchingCustomers.map(c => c._id);
+    
+    // Add search conditions to filter
+    filter.$or = [
+      { customer_id: { $in: customerIds } }, // Match by customer
+      { invoiceNumber: searchRegex }, // Match by invoice number
+      { customerName: searchRegex } // Match by customer name (if stored directly)
+    ];
+  }
+
   const skip = (page - 1) * limit;
 
   // ✅ Run in parallel (performance boost)
   const [total, invoices] = await Promise.all([
     SalesInvoice.countDocuments(filter),
     SalesInvoice.find(filter)
-    .populate("customer_id", "name phone gstin")
+      .populate("customer_id", "name phone gstin")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit),
